@@ -190,7 +190,14 @@ const Admin: React.FC = () => {
              setEditingSlide(prev => ({ ...prev, [targetField]: res }));
           }
       } catch (e: any) {
-          alert('שגיאה ביצירת תוכן: ' + (e.message || 'נסה שוב'));
+          console.error("AI Text Error:", e);
+          let errorMsg = e.message || e.toString();
+          
+          if (errorMsg.includes('503') || errorMsg.includes('overloaded')) {
+              errorMsg = "השרתים של גוגל עמוסים כרגע (שגיאה 503).\nזה קורה לעיתים במודלים חינמיים.\nאנא המתן דקה ונסה שוב.";
+          }
+          
+          alert(`שגיאה:\n${errorMsg}`);
       } finally {
           setAiLoading(false);
       }
@@ -245,7 +252,7 @@ const Admin: React.FC = () => {
       try {
           const res = await generateAIContent(prompt, 'json');
           
-          // Robust JSON extraction (This is the NEW FIX)
+          // Robust JSON extraction
           let jsonString = res.replace(/```json/g, '').replace(/```/g, '').trim();
           
           // Find the array brackets if there is extra text
@@ -268,9 +275,18 @@ const Admin: React.FC = () => {
           setEditingItem(prev => ({ ...prev, tabs: mappedTabs }));
       } catch (e: any) {
           console.error("AI Auto Tabs Error:", e);
-          const errorMsg = e.message || e.toString();
-          // Show explicit error to the user
-          alert(`שגיאה ביצירת טאבים אוטומטית:\n${errorMsg}\n\nנסה שוב או בדוק את המפתח.`);
+          let errorMsg = e.message || e.toString();
+          
+          // Custom friendly error messages
+          if (errorMsg.includes('503') || errorMsg.includes('overloaded') || errorMsg.includes('UNAVAILABLE')) {
+              errorMsg = "השרתים של גוגל עמוסים כרגע (שגיאה 503).\nזה קורה לעיתים במודלים חינמיים כאשר יש עומס עולמי.\n\nאנא המתן דקה-שתיים ונסה שוב.";
+          } else if (errorMsg.includes('SyntaxError') || errorMsg.includes('JSON')) {
+              errorMsg = "המודל החזיר תשובה בפורמט לא תקין.\nלפעמים זה קורה באופן אקראי. אנא נסה ללחוץ שוב.";
+          } else if (errorMsg.includes('403') || errorMsg.includes('key')) {
+              errorMsg = "מפתח ה-API אינו תקין או שנחסם.\nבדוק את ההגדרות בטאב 'חיבורים' וודא שהעתקת את המפתח במלואו.";
+          }
+          
+          alert(`הודעת מערכת:\n${errorMsg}`);
       } finally {
           setAiLoading(false);
       }
