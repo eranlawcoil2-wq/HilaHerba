@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, HelpCircle, StickyNote } from 'lucide-react';
 import { ContentItem, Slide } from '../types';
 
 type Tab = 'general' | 'content' | 'slides' | 'connections';
@@ -31,6 +31,9 @@ const Admin: React.FC = () => {
   const [imagePickerMode, setImagePickerMode] = useState<'url' | 'upload' | 'search'>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+
+  // Accordion State for Instructions
+  const [openInstruction, setOpenInstruction] = useState<'gemini' | 'unsplash' | null>(null);
 
   // --- Handlers ---
 
@@ -216,7 +219,8 @@ create table if not exists general_settings (
   about_short text,
   about_long text,
   gemini_key text,
-  unsplash_key text
+  unsplash_key text,
+  admin_notes text
 );
 
 -- הפעלת Realtime
@@ -568,37 +572,93 @@ alter publication supabase_realtime add table hero_slides;`;
                     {/* API KEYS */}
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                         <h4 className="font-bold text-xl mb-4 text-purple-700 flex items-center gap-2"><Sparkles size={20}/> הגדרות AI ותמונות</h4>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold mb-1">Google Gemini API Key (עבור טקסט אוטומטי)</label>
+                        <div className="space-y-6">
+                            
+                            {/* Gemini Key */}
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                <div className="flex justify-between items-start mb-2">
+                                    <label className="block text-sm font-bold text-gray-800">Google Gemini API Key (עבור טקסט אוטומטי)</label>
+                                    <button 
+                                        onClick={() => setOpenInstruction(openInstruction === 'gemini' ? null : 'gemini')}
+                                        className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
+                                    >
+                                        <HelpCircle size={14} /> איך משיגים?
+                                    </button>
+                                </div>
+                                {openInstruction === 'gemini' && (
+                                    <div className="text-sm text-gray-600 mb-3 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                        <ol className="list-decimal list-inside space-y-1">
+                                            <li>כנס ל- <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-600 underline">Google AI Studio</a>.</li>
+                                            <li>התחבר עם חשבון Google שלך.</li>
+                                            <li>לחץ על <strong>Create API Key</strong>.</li>
+                                            <li>בחר בפרויקט קיים או צור חדש.</li>
+                                            <li>העתק את המפתח שנוצר (מתחיל ב-AIza) והדבק אותו כאן למטה.</li>
+                                        </ol>
+                                    </div>
+                                )}
                                 <input 
                                     type="password" 
-                                    className="w-full border p-2 rounded bg-gray-50"
+                                    className="w-full border p-2 rounded bg-white"
                                     placeholder="AIzaSy..."
                                     value={generalForm.geminiKey}
                                     onChange={e => setGeneralForm({...generalForm, geminiKey: e.target.value})}
                                 />
-                                <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-xs text-blue-500 underline mt-1 block">השג מפתח כאן</a>
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold mb-1">Unsplash Access Key (עבור חיפוש תמונות)</label>
+
+                            {/* Unsplash Key */}
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                <div className="flex justify-between items-start mb-2">
+                                    <label className="block text-sm font-bold text-gray-800">Unsplash Access Key (עבור חיפוש תמונות)</label>
+                                    <button 
+                                        onClick={() => setOpenInstruction(openInstruction === 'unsplash' ? null : 'unsplash')}
+                                        className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
+                                    >
+                                        <HelpCircle size={14} /> איך משיגים?
+                                    </button>
+                                </div>
+                                {openInstruction === 'unsplash' && (
+                                    <div className="text-sm text-gray-600 mb-3 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                        <ol className="list-decimal list-inside space-y-1">
+                                            <li>הרשם כמפתח ב- <a href="https://unsplash.com/developers" target="_blank" className="text-blue-600 underline">Unsplash Developers</a>.</li>
+                                            <li>לחץ על <strong>Your Apps</strong> ואז <strong>New Application</strong>.</li>
+                                            <li>אשר את התנאים ולחץ Accept.</li>
+                                            <li>תן שם לאפליקציה (למשל "My Herbal Site") ולחץ Create.</li>
+                                            <li>גלול למטה לחלק של <strong>Keys</strong> והעתק את ה-<strong>Access Key</strong>.</li>
+                                        </ol>
+                                    </div>
+                                )}
                                 <input 
                                     type="password" 
-                                    className="w-full border p-2 rounded bg-gray-50"
+                                    className="w-full border p-2 rounded bg-white"
                                     value={generalForm.unsplashKey}
                                     onChange={e => setGeneralForm({...generalForm, unsplashKey: e.target.value})}
                                 />
-                                <a href="https://unsplash.com/developers" target="_blank" className="text-xs text-blue-500 underline mt-1 block">הירשם כמפתח Unsplash</a>
                             </div>
-                            <button onClick={handleGeneralSave} className="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold">שמור מפתחות</button>
+
+                            <button onClick={handleGeneralSave} className="bg-purple-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow hover:bg-purple-700 transition-colors">שמור מפתחות</button>
                         </div>
+                    </div>
+
+                    {/* Admin Notes */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                         <h4 className="font-bold text-xl mb-4 flex items-center gap-2 text-yellow-600"><StickyNote size={20}/> תזכורות והערות אישיות</h4>
+                         <p className="text-sm text-gray-500 mb-2">מקום לכתוב לעצמך דברים שצריך לעשות, רעיונות למאמרים או כל דבר אחר.</p>
+                         <textarea 
+                            className="w-full border p-4 rounded-xl bg-yellow-50 text-gray-800 min-h-[150px] shadow-inner focus:bg-white transition-colors"
+                            placeholder="כתוב כאן..."
+                            value={generalForm.adminNotes}
+                            onChange={e => setGeneralForm({...generalForm, adminNotes: e.target.value})}
+                         />
+                         <div className="mt-4 flex justify-end">
+                            <button onClick={handleGeneralSave} className="bg-yellow-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow hover:bg-yellow-700 transition-colors">שמור הערות</button>
+                         </div>
                     </div>
 
                     {/* DB INSTRUCTIONS */}
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                         <h4 className="font-bold text-xl mb-4 flex items-center gap-2"><Database size={20}/> עדכון מסד נתונים</h4>
                         <p className="text-gray-600 mb-4 text-sm">
-                            עקב השינויים במבנה (טאבים דינמיים, סליידר), יש להריץ את ה-SQL הבא ב-Supabase:
+                            עקב השינויים במבנה (טאבים דינמיים, סליידר, הערות מנהל), יש להריץ את ה-SQL הבא ב-Supabase:
                         </p>
                         <div className="relative bg-gray-900 rounded-lg p-4 group">
                              <button onClick={copyToClipboard} className="absolute top-2 left-2 bg-white/20 text-white px-2 py-1 rounded text-xs hover:bg-white/40">{copied ? 'הועתק!' : 'העתק'}</button>
@@ -621,6 +681,7 @@ alter table content add column if not exists tabs jsonb default '[]'::jsonb;
 -- הוספת מפתחות לטבלת הגדרות
 alter table general_settings add column if not exists gemini_key text;
 alter table general_settings add column if not exists unsplash_key text;
+alter table general_settings add column if not exists admin_notes text;
 
 -- הפעלת Realtime
 alter publication supabase_realtime add table hero_slides;`}

@@ -14,6 +14,7 @@ interface GeneralSettings {
   aboutLong: string;
   geminiKey?: string;
   unsplashKey?: string;
+  adminNotes?: string;
 }
 
 interface SiteContextType {
@@ -42,7 +43,8 @@ const defaultGeneral: GeneralSettings = {
   aboutShort: 'מרכז ידע וטיפול בצמחי מרפא.',
   aboutLong: 'ברוכים הבאים לאתר שלי...',
   geminiKey: '',
-  unsplashKey: ''
+  unsplashKey: '',
+  adminNotes: ''
 };
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
@@ -142,7 +144,8 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
           aboutShort: settingsData.about_short,
           aboutLong: settingsData.about_long,
           geminiKey: settingsData.gemini_key || '',
-          unsplashKey: settingsData.unsplash_key || ''
+          unsplashKey: settingsData.unsplash_key || '',
+          adminNotes: settingsData.admin_notes || ''
         });
       }
 
@@ -197,7 +200,8 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       about_short: settings.aboutShort,
       about_long: settings.aboutLong,
       gemini_key: settings.geminiKey,
-      unsplash_key: settings.unsplashKey
+      unsplash_key: settings.unsplashKey,
+      admin_notes: settings.adminNotes
     };
     await supabase.from('general_settings').upsert(dbSettings);
   };

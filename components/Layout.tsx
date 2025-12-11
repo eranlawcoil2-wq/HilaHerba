@@ -181,10 +181,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   הצהרת בריאות
                </button>
             </div>
-            {/* Admin Link */}
-            <Link to="/admin" className="text-gray-600 hover:text-white transition-colors p-2" aria-label="ניהול אתר">
-                <Settings size={16} />
-            </Link>
           </div>
         </div>
       </footer>
@@ -192,6 +188,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Floating Buttons (Bottom Left) */}
       <div className="fixed bottom-6 left-6 z-40 flex flex-col gap-3">
         
+        {/* Settings Button (Top of stack) */}
+        <Link 
+            to="/admin"
+            className="w-12 h-12 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-gray-300"
+            aria-label="ניהול אתר"
+        >
+            <Settings size={24} />
+        </Link>
+
         {/* Accessibility Menu (Conditional) - Appears above buttons */}
         <AnimatePresence>
             {isAccessMenuOpen && (
@@ -225,7 +230,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             )}
         </AnimatePresence>
 
-        {/* Accessibility Button (Now Top) */}
+        {/* Accessibility Button */}
         <button 
             onClick={() => setIsAccessMenuOpen(!isAccessMenuOpen)}
             className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300 relative"
@@ -234,7 +239,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <Accessibility size={24} />
         </button>
 
-        {/* WhatsApp Button (Now Bottom) */}
+        {/* WhatsApp Button (Bottom) */}
         <a 
             href={`https://wa.me/972${general.phone.replace(/\D/g,'')}`} 
             target="_blank" 
