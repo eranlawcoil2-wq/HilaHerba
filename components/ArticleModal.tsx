@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { X, Calendar, Tag, User, Sprout, FileText } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Calendar, Tag, User, Sprout, FileText, BookOpen } from 'lucide-react';
 import { Article, ContentItem } from '../types';
 import { PLANTS, ARTICLES } from '../services/data';
 import { TYPE_LABELS } from '../constants';
@@ -12,7 +12,8 @@ interface ArticleModalProps {
 }
 
 const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchItem }) => {
-    
+    const [activeTab, setActiveTab] = useState<'content' | 'details'>('content');
+
     // Calculate related items
     const relatedItems: ContentItem[] = useMemo(() => {
         const allContent: ContentItem[] = [
@@ -33,6 +34,11 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
             })
             .slice(0, 4); // Limit to 4
     }, [article]);
+
+    const tabLabels = {
+        content: 'תוכן הקריאה',
+        details: 'פרטים ומידע נוסף'
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -71,7 +77,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide text-white mb-3 inline-block shadow-sm ${
                             article.type === 'case_study' ? 'bg-blue-600' : 'bg-green-600'
                         }`}>
-                            {article.type === 'case_study' ? 'מקרה בוחן' : 'מאמר'}
+                            {article.type === 'case_study' ? 'מקרה אירוע' : 'מאמר'}
                         </span>
                         <h2 className="text-2xl md:text-4xl font-serif font-bold text-[#1a2e1a] leading-tight shadow-sm">
                             {article.title}
@@ -79,32 +85,103 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
                     </div>
                 </div>
 
-                {/* Content Container */}
-                <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col">
-                    <div className="p-8 pt-4 flex-grow">
-                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-8 font-medium border-b border-gray-200 pb-4">
-                            <span className="flex items-center gap-1"><Calendar size={14}/> {article.date}</span>
-                            <span className="flex items-center gap-1"><User size={14}/> מערכת Herbal</span>
-                        </div>
+                {/* Tabs Navigation */}
+                <div className="flex items-center gap-6 px-8 pt-4 border-b border-gray-200 flex-shrink-0 bg-[#FAF9F6]">
+                    <button 
+                        onClick={() => setActiveTab('content')}
+                        className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'content' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        {tabLabels.content}
+                        {activeTab === 'content' && <motion.div layoutId="article-tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('details')}
+                        className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'details' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        {tabLabels.details}
+                        {activeTab === 'details' && <motion.div layoutId="article-tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
+                    </button>
+                </div>
 
-                        <div className="prose prose-lg prose-green max-w-none text-gray-700 leading-relaxed font-light">
-                            <p className="font-bold text-xl text-gray-800 mb-6">{article.summary}</p>
-                            <p>{article.content}</p>
-                            <p>
-                                כאן יופיע התוכן המלא של המאמר. כרגע זהו טקסט דמה כדי להמחיש את העיצוב.
-                                הטקסט צריך להיות קריא, עם ריווח נעים לעין.
-                                <br/><br/>
-                                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                            </p>
-                        </div>
+                {/* Scrollable Content Container */}
+                <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col bg-[#FAF9F6]">
+                    <div className="p-8 pt-6 flex-grow min-h-[300px]">
+                        <AnimatePresence mode="wait">
+                            {activeTab === 'content' && (
+                                <motion.div
+                                    key="content"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                >
+                                    <div className="prose prose-lg prose-green max-w-none text-gray-700 leading-relaxed font-light">
+                                        <p className="font-bold text-xl text-gray-800 mb-6">{article.summary}</p>
+                                        <div className="w-20 h-1 bg-green-100 mb-8 rounded-full"></div>
+                                        <p>{article.content}</p>
+                                        <p>
+                                            כאן יופיע התוכן המלא של המאמר. כרגע זהו טקסט דמה כדי להמחיש את העיצוב.
+                                            הטקסט צריך להיות קריא, עם ריווח נעים לעין.
+                                            <br/><br/>
+                                            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            )}
 
-                        <div className="flex items-center gap-2 mt-12 pt-6 border-t border-gray-200">
-                            {article.tags.map((tag, i) => (
-                                <span key={i} className="flex items-center gap-1 text-sm bg-white border border-gray-200 text-gray-600 px-3 py-1 rounded-full">
-                                    <Tag size={12} /> {tag}
-                                </span>
-                            ))}
-                        </div>
+                            {activeTab === 'details' && (
+                                <motion.div
+                                    key="details"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    className="space-y-6"
+                                >
+                                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                        <h3 className="text-lg font-serif font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                            <BookOpen size={20} className="text-green-600"/>
+                                            פרטי הפרסום
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-3 text-sm text-gray-600 border-b border-gray-50 pb-2">
+                                                <Calendar size={16} className="text-green-500"/>
+                                                <span className="font-bold">תאריך פרסום:</span>
+                                                <span>{article.date}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-sm text-gray-600 border-b border-gray-50 pb-2">
+                                                <User size={16} className="text-green-500"/>
+                                                <span className="font-bold">נכתב ע"י:</span>
+                                                <span>צוות Herbal Wisdom</span>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-sm text-gray-600">
+                                                <FileText size={16} className="text-green-500"/>
+                                                <span className="font-bold">סוג תוכן:</span>
+                                                <span>{TYPE_LABELS[article.type]}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                        <h3 className="text-lg font-serif font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                            <Tag size={20} className="text-green-600"/>
+                                            תגיות ונושאים
+                                        </h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {article.tags.map((tag, i) => (
+                                                <span key={i} className="flex items-center gap-1 text-sm bg-green-50 border border-green-100 text-green-700 px-3 py-1.5 rounded-lg">
+                                                    # {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {article.type === 'case_study' && (
+                                        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 text-blue-900 text-sm leading-relaxed">
+                                            <strong>שים לב:</strong> מקרה האירוע המתואר כאן הינו להמחשה בלבד ושמות המטופלים שונו לשמירה על פרטיות. אין לראות בתיאור המקרה המלצה רפואית גורפת.
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
                     {/* Related Items Section */}

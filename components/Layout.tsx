@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Leaf } from 'lucide-react';
+import { Menu, X, Leaf, MessageCircle, Accessibility, Eye, Type, Minus } from 'lucide-react';
 import { NAV_ITEMS } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
+import LegalModal, { LegalType } from './LegalModal';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Legal Modal State
+  const [legalModalType, setLegalModalType] = useState<LegalType>(null);
+
+  // Accessibility State
+  const [isAccessMenuOpen, setIsAccessMenuOpen] = useState(false);
+  const [highContrast, setHighContrast] = useState(false);
+  const [largeText, setLargeText] = useState(false);
+
   const location = useLocation();
 
   useEffect(() => {
@@ -22,7 +32,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }, [location]);
 
   return (
-    <div className="min-h-screen flex flex-col font-sans text-gray-800 bg-[#FAF9F6]">
+    <div className={`min-h-screen flex flex-col font-sans text-gray-800 bg-[#FAF9F6] transition-all duration-300 ${highContrast ? 'grayscale contrast-125' : ''} ${largeText ? 'text-lg' : ''}`}>
       {/* Navigation */}
       <nav
         className={`fixed top-0 w-full z-50 transition-all duration-300 ease-in-out ${
@@ -51,9 +61,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`text-lg font-medium transition-colors hover:text-green-700 relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-green-700 after:transition-all hover:after:w-full ${
+                className={`font-medium transition-colors hover:text-green-700 relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-green-700 after:transition-all hover:after:w-full ${
                     location.pathname === item.path ? 'text-green-800 after:w-full' : 'text-gray-700'
-                }`}
+                } ${largeText ? 'text-xl' : 'text-lg'}`}
               >
                 {item.label}
               </Link>
@@ -101,7 +111,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#1a2e1a] text-white py-12 border-t border-green-800">
+      <footer className="bg-[#1a2e1a] text-white py-12 border-t border-green-800 relative z-30">
         <div className="container mx-auto px-6 grid md:grid-cols-3 gap-8 text-center md:text-right">
           <div>
             <h3 className="text-2xl font-serif mb-4 flex items-center justify-center md:justify-start gap-2">
@@ -128,16 +138,94 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
 
           <div>
-            <h4 className="text-lg font-bold mb-4 text-green-100">צור קשר</h4>
-            <p className="text-gray-300">טלפון: 050-1234567</p>
-            <p className="text-gray-300">מייל: info@herbal.co.il</p>
-            <p className="text-gray-300">קליניקה: תל אביב</p>
+            <h4 className="text-lg font-bold mb-4 text-green-100">מדיניות ומידע</h4>
+            <ul className="space-y-2">
+                <li>
+                    <button onClick={() => setLegalModalType('health')} className="text-gray-400 hover:text-white transition-colors text-sm hover:underline">
+                        הצהרת בריאות
+                    </button>
+                </li>
+                <li>
+                    <button onClick={() => setLegalModalType('privacy')} className="text-gray-400 hover:text-white transition-colors text-sm hover:underline">
+                        מדיניות פרטיות
+                    </button>
+                </li>
+                <li>
+                    <button onClick={() => setLegalModalType('terms')} className="text-gray-400 hover:text-white transition-colors text-sm hover:underline">
+                        תנאי שימוש
+                    </button>
+                </li>
+            </ul>
           </div>
         </div>
         <div className="text-center mt-12 pt-8 border-t border-green-900 text-gray-500 text-sm">
           © {new Date().getFullYear()} Herbal.co.il. כל הזכויות שמורות.
         </div>
       </footer>
+
+      {/* Floating Buttons (Bottom Left) */}
+      <div className="fixed bottom-6 left-6 z-40 flex flex-col gap-3">
+        
+        {/* Accessibility Menu */}
+        <AnimatePresence>
+            {isAccessMenuOpen && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                    className="mb-2 bg-white rounded-xl shadow-xl p-3 border border-gray-100 min-w-[160px]"
+                >
+                    <div className="space-y-2">
+                        <button 
+                            onClick={() => setLargeText(!largeText)}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${largeText ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'}`}
+                        >
+                            <Type size={16} /> הגדל טקסט
+                        </button>
+                        <button 
+                            onClick={() => setHighContrast(!highContrast)}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${highContrast ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'}`}
+                        >
+                            <Eye size={16} /> ניגודיות גבוהה
+                        </button>
+                         <button 
+                            onClick={() => {setLargeText(false); setHighContrast(false);}}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-red-50 text-red-600 border-t border-gray-100 mt-1"
+                        >
+                            <Minus size={16} /> איפוס
+                        </button>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
+        <button 
+            onClick={() => setIsAccessMenuOpen(!isAccessMenuOpen)}
+            className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300"
+            aria-label="נגישות"
+        >
+            <Accessibility size={24} />
+        </button>
+
+        {/* WhatsApp Button */}
+        <a 
+            href="https://wa.me/972501234567" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-12 h-12 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-green-300"
+            aria-label="Chat on WhatsApp"
+        >
+            <MessageCircle size={24} />
+        </a>
+      </div>
+
+      {/* Legal Modal */}
+      <AnimatePresence>
+        {legalModalType && (
+            <LegalModal type={legalModalType} onClose={() => setLegalModalType(null)} />
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

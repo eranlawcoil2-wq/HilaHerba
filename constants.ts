@@ -28,5 +28,5 @@ export const TYPE_LABELS: Record<string, string> = {
   all: 'כל התכנים',
   plant: 'צמחי מרפא',
   article: 'מאמרים',
-  case_study: 'מקרי בוחן'
+  case_study: 'מקרי אירוע'
 };
