@@ -1,91 +1,139 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Leaf } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, ChevronRight, ChevronLeft, Sprout } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const SLIDES = [
+  {
+    id: 1,
+    title: "להתחבר לקצב של הטבע",
+    subtitle: "נשימה עמוקה",
+    text: "העולם שסביבנו מלא בשקט ובעוצמה. כשאנחנו עוצרים לרגע ומקשיבים לרחש העלים ולזרימת המים, אנחנו מוצאים את האיזון הפנימי שאבד לנו במירוץ היומיומי.",
+    image: "https://picsum.photos/seed/nature_forest/1200/1000",
+    color: "bg-[#1a2e1a]"
+  },
+  {
+    id: 2,
+    title: "חוכמת האדמה העתיקה",
+    subtitle: "שורשים וצמיחה",
+    text: "כל צמח נושא בתוכו ידע עתיק שעבר מדור לדור. האדמה מלמדת אותנו סבלנות מהי, ואיך מתוך גרעין קטן יכול לצמוח יער שלם של ריפוי והתחדשות.",
+    image: "https://picsum.photos/seed/earth_hands/1200/1000",
+    color: "bg-[#8B4513]"
+  },
+  {
+    id: 3,
+    title: "זרימה, שינוי והתחדשות",
+    subtitle: "מעגל החיים",
+    text: "כמו עונות השנה, גם הגוף והנפש שלנו נמצאים בתנועה מתמדת. הטבע מזכיר לנו שכל סוף הוא התחלה חדשה, ושיש יופי עצום בקבלה של השינוי.",
+    image: "https://picsum.photos/seed/river_flow/1200/1000",
+    color: "bg-[#2F4F4F]"
+  }
+];
+
 const Hero: React.FC = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
+
+  const activeSlide = SLIDES[currentSlide];
+
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden">
-      {/* Background Decorative Elements */}
-      <div className="absolute top-0 left-0 w-full h-full bg-[#f4f1ea] -z-20"></div>
-      <div className="absolute top-0 right-0 w-1/3 h-full bg-[#e8e4db] -z-10 rounded-l-[100px] hidden md:block"></div>
-
-      <div className="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+    <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-[#FAF9F6] pt-20 md:pt-0">
+      
+      {/* Container - Grid Layout */}
+      {/* RTL: First element is Right, Second element is Left */}
+      <div className="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center h-full relative z-10">
         
-        {/* Text Content */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="order-2 md:order-1 text-center md:text-right"
-        >
-          <span className="text-green-700 font-medium tracking-widest uppercase text-sm mb-4 block">
-            רפואה טבעית ומסורתית
-          </span>
-          <h1 className="text-5xl md:text-7xl font-serif font-bold text-[#1a2e1a] leading-tight mb-6">
-            הטבע הוא <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-l from-green-800 to-green-600">
-              המרפא הטוב ביותר
-            </span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-lg mx-auto md:mx-0">
-            גלו את הכוח המרפא של הצמחים. מאגר ידע מקיף, מאמרים מקצועיים וטיפול אישי המותאם לצרכים שלכם.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-            <Link 
-              to="/plants" 
-              className="px-8 py-4 bg-[#1a2e1a] text-white rounded-full font-medium hover:bg-green-800 transition-all transform hover:scale-105 flex items-center justify-center gap-2"
-            >
-              אינדקס הצמחים
-              <ArrowLeft size={18} />
-            </Link>
-            <Link 
-              to="/contact" 
-              className="px-8 py-4 border border-[#1a2e1a] text-[#1a2e1a] rounded-full font-medium hover:bg-[#1a2e1a] hover:text-white transition-all flex items-center justify-center"
-            >
-              תיאום ייעוץ
-            </Link>
-          </div>
-        </motion.div>
+        {/* RIGHT SIDE (First in RTL): Text */}
+        <div className="text-right order-1 md:order-1 flex flex-col justify-center items-start md:pr-12">
+           <AnimatePresence mode="wait">
+               <motion.div
+                  key={activeSlide.id}
+                  initial={{ opacity: 0, x: 30 }} // Slide from right
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="w-full"
+               >
+                  <div className="flex items-center gap-2 text-green-700 font-bold tracking-widest uppercase text-sm mb-4">
+                    <Sprout size={18} />
+                    <span>{activeSlide.subtitle}</span>
+                  </div>
+                  
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-[#1a2e1a] mb-6 leading-tight">
+                    {activeSlide.title}
+                  </h1>
+                  
+                  <p className="text-xl text-gray-600 mb-10 leading-relaxed font-light max-w-lg">
+                    {activeSlide.text}
+                  </p>
 
-        {/* Image Content */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, delay: 0.2 }}
-          className="order-1 md:order-2 relative h-[50vh] md:h-[70vh] w-full"
-        >
-          <div className="relative w-full h-full rounded-[40px] overflow-hidden shadow-2xl">
-             <img 
-               src="https://picsum.photos/seed/herbalist/800/1200" 
-               alt="Medicinal Plants" 
-               className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-[2s]"
-             />
-             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-          </div>
-          
-          {/* Floating Card */}
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.8, duration: 0.6 }}
-            className="absolute -bottom-6 -left-6 md:bottom-10 md:-left-10 bg-white p-6 rounded-2xl shadow-xl max-w-xs hidden sm:block"
-          >
-            <div className="flex items-center gap-4 mb-2">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-700">
-                    <Leaf size={20} />
+                  <div className="flex justify-start gap-4">
+                    <Link 
+                      to="/about" 
+                      className="group px-8 py-3 bg-[#1a2e1a] text-white rounded-full font-medium hover:bg-green-800 transition-all flex items-center gap-3 shadow-lg hover:shadow-xl hover:-translate-y-1"
+                    >
+                      <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1" />
+                      <span>גלו עוד</span> 
+                    </Link>
+                  </div>
+               </motion.div>
+           </AnimatePresence>
+
+            {/* Slider Controls */}
+            <div className="flex items-center gap-4 mt-12">
+                 <button onClick={nextSlide} className="p-3 rounded-full border border-gray-300 hover:bg-[#1a2e1a] hover:text-white hover:border-[#1a2e1a] transition-all">
+                    <ChevronRight size={20} />
+                </button>
+                <div className="flex gap-2">
+                    {SLIDES.map((_, index) => (
+                        <button
+                            key={index}
+                            onClick={() => setCurrentSlide(index)}
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                                index === currentSlide ? 'w-8 bg-[#1a2e1a]' : 'w-2 bg-gray-300 hover:bg-gray-400'
+                            }`}
+                        />
+                    ))}
                 </div>
-                <div>
-                    <p className="font-bold text-gray-800">הצמח החודשי</p>
-                    <p className="text-sm text-gray-500">אכינצאה</p>
-                </div>
+                <button onClick={prevSlide} className="p-3 rounded-full border border-gray-300 hover:bg-[#1a2e1a] hover:text-white hover:border-[#1a2e1a] transition-all">
+                    <ChevronLeft size={20} />
+                </button>
             </div>
-            <p className="text-sm text-gray-600 leading-snug">
-                ידוע בסגולותיו לחיזוק המערכת החיסונית בחילופי עונות.
-            </p>
-          </motion.div>
-        </motion.div>
+        </div>
+
+        {/* LEFT SIDE (Second in RTL): Image */}
+        <div className="relative h-[50vh] md:h-[65vh] w-full order-2 md:order-2">
+            <AnimatePresence mode="wait">
+                <motion.div 
+                    key={activeSlide.id}
+                    className="w-full h-full rounded-[3rem] overflow-hidden shadow-2xl relative"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8 }}
+                >
+                    <img 
+                        src={activeSlide.image} 
+                        alt={activeSlide.title} 
+                        className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/10"></div>
+                </motion.div>
+            </AnimatePresence>
+            
+            {/* Decorative Circle behind image */}
+            <div className="absolute -top-8 -left-8 w-64 h-64 bg-green-100/50 rounded-full -z-10 blur-3xl"></div>
+            <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-[#D2B48C]/30 rounded-full -z-10 blur-2xl"></div>
+        </div>
 
       </div>
     </section>

@@ -87,7 +87,7 @@ const Home: React.FC = () => {
             </div>
           </div>
 
-          <div className="relative min-h-[400px]">
+          <div className="relative min-h-[300px]">
              <AnimatePresence mode="wait">
                  <motion.div 
                     key={currentPage}
@@ -100,35 +100,41 @@ const Home: React.FC = () => {
                     {displayedPlants.map((plant) => (
                       <motion.div
                         key={plant.id}
-                        whileHover={{ y: -5 }}
+                        whileHover={{ y: -8, scale: 1.02 }}
                         onClick={() => setSelectedPlant(plant)}
-                        className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col h-[320px] border border-gray-100 group"
+                        className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col h-[320px] border border-gray-100 group relative"
                       >
-                         {/* Text Top */}
-                         <div className="p-5 flex-grow flex flex-col relative">
-                                <span className="absolute top-4 left-4 bg-green-50 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                                    {CATEGORY_LABELS[plant.category]}
-                                </span>
-                                <h3 className="text-xl font-serif font-bold text-gray-800 mb-1 group-hover:text-green-800 transition-colors">
-                                    {plant.hebrewName}
-                                </h3>
-                                <p className="text-xs text-gray-400 italic mb-3 font-serif">{plant.latinName}</p>
-                                <p className="text-gray-500 text-sm line-clamp-3 leading-relaxed">
-                                    {plant.description}
-                                </p>
-                                <div className="mt-auto pt-2 text-green-600 text-xs font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    למידע נוסף <ChevronLeft size={12} />
-                                </div>
+                         {/* Top Section: Names */}
+                         <div className="px-5 pt-5 pb-3 bg-white z-10">
+                             <div className="flex justify-between items-start mb-1">
+                                 <h3 className="text-xl font-serif font-bold text-gray-800 group-hover:text-green-800 transition-colors">
+                                     {plant.hebrewName}
+                                 </h3>
+                                 <span className="bg-green-50 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                     {CATEGORY_LABELS[plant.category]}
+                                 </span>
+                             </div>
+                             <p className="text-sm text-gray-400 italic font-serif">{plant.latinName}</p>
                          </div>
-                         
-                         {/* Image Bottom */}
-                         <div className="h-2/5 w-full relative overflow-hidden">
-                                <img 
-                                    src={plant.imageUrl} 
-                                    alt={plant.hebrewName} 
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                         {/* Main Image Area with Tags Overlay */}
+                         <div className="relative flex-grow w-full overflow-hidden">
+                             <img 
+                                 src={plant.imageUrl} 
+                                 alt={plant.hebrewName} 
+                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                             />
+                             {/* Gradient Overlay for text readability - Reduced Height */}
+                             <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent pointer-events-none"></div>
+                             
+                             {/* Tags on Image - Limited to 2 lines */}
+                             <div className="absolute bottom-3 right-3 left-3 flex flex-wrap gap-1.5 justify-start max-h-[46px] overflow-hidden">
+                                {plant.benefits.map((benefit, i) => (
+                                    <span key={i} className="bg-white/90 backdrop-blur-sm text-[#1a2e1a] text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm whitespace-nowrap">
+                                        {benefit}
+                                    </span>
+                                ))}
+                             </div>
                          </div>
                       </motion.div>
                     ))}
