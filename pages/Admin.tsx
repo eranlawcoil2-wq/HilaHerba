@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, HelpCircle, StickyNote } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, HelpCircle, StickyNote, Server, HardDrive } from 'lucide-react';
 import { ContentItem, Slide } from '../types';
 
 type Tab = 'general' | 'content' | 'slides' | 'connections';
@@ -33,7 +33,7 @@ const Admin: React.FC = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
 
   // Accordion State for Instructions
-  const [openInstruction, setOpenInstruction] = useState<'gemini' | 'unsplash' | null>(null);
+  const [openInstruction, setOpenInstruction] = useState<'gemini' | 'unsplash' | 'supabase_sql' | 'supabase_storage' | null>(null);
 
   // --- Handlers ---
 
@@ -246,7 +246,7 @@ alter publication supabase_realtime add table hero_slides;`;
                 { id: 'general', label: 'הגדרות כלליות', icon: Settings },
                 { id: 'slides', label: 'ניהול סליידר', icon: MonitorPlay },
                 { id: 'content', label: 'ניהול תכנים', icon: FileText },
-                { id: 'connections', label: 'חיבורים (API)', icon: Database },
+                { id: 'connections', label: 'חיבורים ותזכורות', icon: Database },
             ].map(item => (
                 <button
                     key={item.id}
@@ -568,102 +568,112 @@ alter publication supabase_realtime add table hero_slides;`;
             <div className="max-w-4xl">
                 <h3 className="text-3xl font-bold mb-6">חיבורים והגדרות טכניות</h3>
                 
-                <div className="space-y-8">
-                    {/* API KEYS */}
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h4 className="font-bold text-xl mb-4 text-purple-700 flex items-center gap-2"><Sparkles size={20}/> הגדרות AI ותמונות</h4>
-                        <div className="space-y-6">
-                            
-                            {/* Gemini Key */}
-                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                <div className="flex justify-between items-start mb-2">
-                                    <label className="block text-sm font-bold text-gray-800">Google Gemini API Key (עבור טקסט אוטומטי)</label>
-                                    <button 
-                                        onClick={() => setOpenInstruction(openInstruction === 'gemini' ? null : 'gemini')}
-                                        className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
-                                    >
-                                        <HelpCircle size={14} /> איך משיגים?
-                                    </button>
-                                </div>
-                                {openInstruction === 'gemini' && (
-                                    <div className="text-sm text-gray-600 mb-3 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                        <ol className="list-decimal list-inside space-y-1">
-                                            <li>כנס ל- <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-600 underline">Google AI Studio</a>.</li>
-                                            <li>התחבר עם חשבון Google שלך.</li>
-                                            <li>לחץ על <strong>Create API Key</strong>.</li>
-                                            <li>בחר בפרויקט קיים או צור חדש.</li>
-                                            <li>העתק את המפתח שנוצר (מתחיל ב-AIza) והדבק אותו כאן למטה.</li>
-                                        </ol>
-                                    </div>
-                                )}
-                                <input 
-                                    type="password" 
-                                    className="w-full border p-2 rounded bg-white"
-                                    placeholder="AIzaSy..."
-                                    value={generalForm.geminiKey}
-                                    onChange={e => setGeneralForm({...generalForm, geminiKey: e.target.value})}
-                                />
-                            </div>
+                <div className="grid lg:grid-cols-2 gap-8 items-start">
+                    
+                    {/* LEFT COLUMN: API & Notes */}
+                    <div className="space-y-6">
+                         {/* Admin Notes - MOVED HERE & LARGER */}
+                        <div className="bg-yellow-50 p-6 rounded-2xl shadow-sm border border-yellow-200">
+                             <h4 className="font-bold text-xl mb-3 flex items-center gap-2 text-yellow-800"><StickyNote size={20}/> תזכורות והערות אישיות</h4>
+                             <p className="text-sm text-yellow-700 mb-3">אזור אישי לרישום משימות, רעיונות למאמרים ושינויים שצריך לבצע.</p>
+                             <textarea 
+                                className="w-full border border-yellow-300 p-4 rounded-xl bg-white text-gray-800 min-h-[250px] shadow-inner focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all text-base"
+                                placeholder="למשל: לכתוב מאמר על סרפד בשבוע הבא..."
+                                value={generalForm.adminNotes}
+                                onChange={e => setGeneralForm({...generalForm, adminNotes: e.target.value})}
+                             />
+                             <div className="mt-4 flex justify-end">
+                                <button onClick={handleGeneralSave} className="bg-yellow-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow hover:bg-yellow-700 transition-colors">שמור הערות</button>
+                             </div>
+                        </div>
 
-                            {/* Unsplash Key */}
-                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                <div className="flex justify-between items-start mb-2">
-                                    <label className="block text-sm font-bold text-gray-800">Unsplash Access Key (עבור חיפוש תמונות)</label>
-                                    <button 
-                                        onClick={() => setOpenInstruction(openInstruction === 'unsplash' ? null : 'unsplash')}
-                                        className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
-                                    >
-                                        <HelpCircle size={14} /> איך משיגים?
-                                    </button>
-                                </div>
-                                {openInstruction === 'unsplash' && (
-                                    <div className="text-sm text-gray-600 mb-3 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                        <ol className="list-decimal list-inside space-y-1">
-                                            <li>הרשם כמפתח ב- <a href="https://unsplash.com/developers" target="_blank" className="text-blue-600 underline">Unsplash Developers</a>.</li>
-                                            <li>לחץ על <strong>Your Apps</strong> ואז <strong>New Application</strong>.</li>
-                                            <li>אשר את התנאים ולחץ Accept.</li>
-                                            <li>תן שם לאפליקציה (למשל "My Herbal Site") ולחץ Create.</li>
-                                            <li>גלול למטה לחלק של <strong>Keys</strong> והעתק את ה-<strong>Access Key</strong>.</li>
-                                        </ol>
+                         {/* API KEYS */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h4 className="font-bold text-xl mb-4 text-purple-700 flex items-center gap-2"><Sparkles size={20}/> מפתחות (API)</h4>
+                            <div className="space-y-4">
+                                {/* Gemini Key */}
+                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <label className="block text-sm font-bold text-gray-800">Gemini API Key</label>
+                                        <button onClick={() => setOpenInstruction(openInstruction === 'gemini' ? null : 'gemini')} className="text-xs text-blue-600 flex items-center gap-1 hover:underline"><HelpCircle size={14} /> עזרה</button>
                                     </div>
-                                )}
-                                <input 
-                                    type="password" 
-                                    className="w-full border p-2 rounded bg-white"
-                                    value={generalForm.unsplashKey}
-                                    onChange={e => setGeneralForm({...generalForm, unsplashKey: e.target.value})}
-                                />
+                                    {openInstruction === 'gemini' && (
+                                        <div className="text-xs bg-blue-50 p-2 rounded mb-2 border border-blue-100">
+                                            1. לך ל-Google AI Studio.<br/>2. צור מפתח (Create API Key).<br/>3. העתק והדבק כאן.
+                                        </div>
+                                    )}
+                                    <input type="password" className="w-full border p-2 rounded bg-white" placeholder="AIzaSy..." value={generalForm.geminiKey} onChange={e => setGeneralForm({...generalForm, geminiKey: e.target.value})} />
+                                </div>
+                                {/* Unsplash Key */}
+                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <label className="block text-sm font-bold text-gray-800">Unsplash Key</label>
+                                        <button onClick={() => setOpenInstruction(openInstruction === 'unsplash' ? null : 'unsplash')} className="text-xs text-blue-600 flex items-center gap-1 hover:underline"><HelpCircle size={14} /> עזרה</button>
+                                    </div>
+                                     {openInstruction === 'unsplash' && (
+                                        <div className="text-xs bg-blue-50 p-2 rounded mb-2 border border-blue-100">
+                                            1. הרשם כמפתח ב-Unsplash.<br/>2. צור אפליקציה חדשה.<br/>3. העתק את ה-Access Key.
+                                        </div>
+                                    )}
+                                    <input type="password" className="w-full border p-2 rounded bg-white" value={generalForm.unsplashKey} onChange={e => setGeneralForm({...generalForm, unsplashKey: e.target.value})} />
+                                </div>
+                                <button onClick={handleGeneralSave} className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-purple-700">שמור מפתחות</button>
                             </div>
-
-                            <button onClick={handleGeneralSave} className="bg-purple-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow hover:bg-purple-700 transition-colors">שמור מפתחות</button>
                         </div>
                     </div>
 
-                    {/* Admin Notes */}
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                         <h4 className="font-bold text-xl mb-4 flex items-center gap-2 text-yellow-600"><StickyNote size={20}/> תזכורות והערות אישיות</h4>
-                         <p className="text-sm text-gray-500 mb-2">מקום לכתוב לעצמך דברים שצריך לעשות, רעיונות למאמרים או כל דבר אחר.</p>
-                         <textarea 
-                            className="w-full border p-4 rounded-xl bg-yellow-50 text-gray-800 min-h-[150px] shadow-inner focus:bg-white transition-colors"
-                            placeholder="כתוב כאן..."
-                            value={generalForm.adminNotes}
-                            onChange={e => setGeneralForm({...generalForm, adminNotes: e.target.value})}
-                         />
-                         <div className="mt-4 flex justify-end">
-                            <button onClick={handleGeneralSave} className="bg-yellow-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow hover:bg-yellow-700 transition-colors">שמור הערות</button>
-                         </div>
-                    </div>
+                    {/* RIGHT COLUMN: Database & Instructions */}
+                    <div className="space-y-6">
+                         
+                         {/* Supabase Guide */}
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                            <h4 className="font-bold text-xl mb-4 flex items-center gap-2 text-blue-800"><Database size={20}/> הגדרת Supabase (מסד נתונים)</h4>
+                            
+                            <div className="space-y-4">
+                                
+                                {/* 1. SQL Instructions */}
+                                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                                    <button 
+                                        onClick={() => setOpenInstruction(openInstruction === 'supabase_sql' ? null : 'supabase_sql')}
+                                        className="w-full bg-gray-50 p-4 flex justify-between items-center hover:bg-gray-100 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2 font-bold text-gray-700">
+                                            <Server size={18}/> 1. יצירת הטבלאות (SQL)
+                                        </div>
+                                        {openInstruction === 'supabase_sql' ? <div className="rotate-180">▲</div> : <div>▼</div>}
+                                    </button>
+                                    {openInstruction === 'supabase_sql' && (
+                                        <div className="p-4 bg-white text-sm space-y-3">
+                                            <p>הקוד הזה יוצר את הטבלאות הנדרשות לשמירת המידע. כך מפעילים אותו:</p>
+                                            <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                                                <li>הכנס לפרויקט שלך ב-Supabase.</li>
+                                                <li>בתפריט בצד שמאל, לחץ על האייקון <strong>SQL Editor</strong>.</li>
+                                                <li>לחץ על <strong>New Query</strong> (למעלה משמאל).</li>
+                                                <li>העתק את הקוד למטה והדבק אותו בחלון העורך.</li>
+                                                <li>לחץ על כפתור <strong>RUN</strong> הירוק בצד ימין למטה.</li>
+                                                <li>וודא שכתוב למטה "Success".</li>
+                                            </ol>
+                                            <div className="relative bg-gray-900 rounded-lg p-3 group mt-2">
+                                                <button onClick={copyToClipboard} className="absolute top-2 left-2 bg-white/20 text-white px-2 py-1 rounded text-xs hover:bg-white/40">{copied ? 'הועתק!' : 'העתק'}</button>
+                                                <pre className="text-blue-300 text-xs overflow-x-auto font-mono dir-ltr text-left h-32 custom-scrollbar">
+                                                    {`-- יצירת טבלאות
+create table if not exists content (
+  id text primary key,
+  type text,
+  hebrew_name text,
+  latin_name text,
+  description text,
+  benefits text[],
+  category text,
+  image_url text,
+  title text,
+  summary text,
+  date text,
+  tags text[],
+  tabs jsonb default '[]'::jsonb,
+  created_at timestamptz default now()
+);
 
-                    {/* DB INSTRUCTIONS */}
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h4 className="font-bold text-xl mb-4 flex items-center gap-2"><Database size={20}/> עדכון מסד נתונים</h4>
-                        <p className="text-gray-600 mb-4 text-sm">
-                            עקב השינויים במבנה (טאבים דינמיים, סליידר, הערות מנהל), יש להריץ את ה-SQL הבא ב-Supabase:
-                        </p>
-                        <div className="relative bg-gray-900 rounded-lg p-4 group">
-                             <button onClick={copyToClipboard} className="absolute top-2 left-2 bg-white/20 text-white px-2 py-1 rounded text-xs hover:bg-white/40">{copied ? 'הועתק!' : 'העתק'}</button>
-                             <pre className="text-blue-300 text-xs overflow-x-auto font-mono dir-ltr text-left">
-                                {`-- טבלת סליידר (Hero)
 create table if not exists hero_slides (
   id text primary key,
   title text,
@@ -675,22 +685,61 @@ create table if not exists hero_slides (
   created_at timestamptz default now()
 );
 
--- עדכון טבלת תוכן (הוספת עמודת טאבים)
-alter table content add column if not exists tabs jsonb default '[]'::jsonb;
+create table if not exists general_settings (
+  id int primary key default 1,
+  site_name text,
+  therapist_name text,
+  phone text,
+  email text,
+  address text,
+  about_short text,
+  about_long text,
+  gemini_key text,
+  unsplash_key text,
+  admin_notes text
+);
 
--- הוספת מפתחות לטבלת הגדרות
-alter table general_settings add column if not exists gemini_key text;
-alter table general_settings add column if not exists unsplash_key text;
-alter table general_settings add column if not exists admin_notes text;
-
--- הפעלת Realtime
+alter publication supabase_realtime add table content;
+alter publication supabase_realtime add table general_settings;
 alter publication supabase_realtime add table hero_slides;`}
-                             </pre>
-                        </div>
-                         <p className="mt-4 text-sm text-gray-500 bg-yellow-50 p-2 rounded">
-                            <strong>שים לב:</strong> כדי לאפשר העלאת תמונות, עליך ליצור Bucket ב-Storage של Supabase בשם <code>public-images</code> ולהגדיר אותו כ-Public.
-                        </p>
+                                                </pre>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 2. Storage Instructions */}
+                                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                                    <button 
+                                        onClick={() => setOpenInstruction(openInstruction === 'supabase_storage' ? null : 'supabase_storage')}
+                                        className="w-full bg-gray-50 p-4 flex justify-between items-center hover:bg-gray-100 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2 font-bold text-gray-700">
+                                            <HardDrive size={18}/> 2. הגדרת אחסון תמונות (Storage)
+                                        </div>
+                                        {openInstruction === 'supabase_storage' ? <div className="rotate-180">▲</div> : <div>▼</div>}
+                                    </button>
+                                    {openInstruction === 'supabase_storage' && (
+                                        <div className="p-4 bg-white text-sm space-y-3">
+                                            <p>כדי שתוכל להעלות תמונות מהמחשב, צריך ליצור "דלי" (Bucket) ציבורי:</p>
+                                            <ol className="list-decimal list-inside space-y-2 text-gray-600">
+                                                <li>בתפריט בצד שמאל ב-Supabase, לחץ על <strong>Storage</strong>.</li>
+                                                <li>לחץ על כפתור <strong>New Bucket</strong>.</li>
+                                                <li>בשדה השם כתוב בדיוק: <code className="bg-gray-100 px-1 rounded text-red-600 font-bold">public-images</code></li>
+                                                <li>
+                                                    <strong>חשוב מאוד:</strong> הפעל את המתג <span className="font-bold">Public bucket</span> (כך שיהיה ירוק/פעיל).
+                                                    <br/><span className="text-xs text-gray-500">אם לא תעשה זאת, התמונות לא יוצגו באתר.</span>
+                                                </li>
+                                                <li>לחץ על <strong>Save</strong>.</li>
+                                            </ol>
+                                        </div>
+                                    )}
+                                </div>
+
+                            </div>
+                         </div>
                     </div>
+
                 </div>
             </div>
         )}
