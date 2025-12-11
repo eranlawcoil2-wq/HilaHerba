@@ -291,7 +291,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
         const ai = new GoogleGenAI({ apiKey: general.geminiKey });
         
-        // Removed thinkingConfig to fix permission errors
+        // Removed thinkingConfig to fix API permission errors
         const config: any = {};
 
         if (type === 'json') {
