@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, HelpCircle, StickyNote, Server, HardDrive } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, HelpCircle, StickyNote, Server, HardDrive, Globe } from 'lucide-react';
 import { ContentItem, Slide } from '../types';
 
 type Tab = 'general' | 'content' | 'slides' | 'connections';
@@ -33,7 +33,7 @@ const Admin: React.FC = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
 
   // Accordion State for Instructions
-  const [openInstruction, setOpenInstruction] = useState<'gemini' | 'unsplash' | 'supabase_sql' | 'supabase_storage' | null>(null);
+  const [openInstruction, setOpenInstruction] = useState<'gemini' | 'unsplash' | 'supabase_sql' | 'supabase_storage' | 'deploy' | null>(null);
 
   // --- Handlers ---
 
@@ -177,8 +177,7 @@ const Admin: React.FC = () => {
       }
   };
 
-  const copyToClipboard = () => {
-    const sql = `-- טבלת תכנים (צמחים ומאמרים)
+  const sqlCode = `-- 1. יצירת טבלאות
 create table if not exists content (
   id text primary key,
   type text,
@@ -196,7 +195,6 @@ create table if not exists content (
   created_at timestamptz default now()
 );
 
--- טבלת סליידר (Hero)
 create table if not exists hero_slides (
   id text primary key,
   title text,
@@ -208,7 +206,6 @@ create table if not exists hero_slides (
   created_at timestamptz default now()
 );
 
--- טבלת הגדרות כלליות
 create table if not exists general_settings (
   id int primary key default 1,
   site_name text,
@@ -223,11 +220,45 @@ create table if not exists general_settings (
   admin_notes text
 );
 
--- הפעלת Realtime
-alter publication supabase_realtime add table content;
-alter publication supabase_realtime add table general_settings;
-alter publication supabase_realtime add table hero_slides;`;
-    navigator.clipboard.writeText(sql);
+-- 2. הפעלת Realtime (בטוח)
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'content') then
+    alter publication supabase_realtime add table content;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'general_settings') then
+    alter publication supabase_realtime add table general_settings;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'hero_slides') then
+    alter publication supabase_realtime add table hero_slides;
+  end if;
+end $$;
+
+-- 3. הרשאות (חשוב מאוד!)
+alter table content enable row level security;
+alter table hero_slides enable row level security;
+alter table general_settings enable row level security;
+
+-- ניקוי מדיניות ישנה למניעת כפילויות
+drop policy if exists "Public Read Content" on content;
+drop policy if exists "Public Write Content" on content;
+drop policy if exists "Public Read Slides" on hero_slides;
+drop policy if exists "Public Write Slides" on hero_slides;
+drop policy if exists "Public Read Settings" on general_settings;
+drop policy if exists "Public Write Settings" on general_settings;
+
+-- יצירת הרשאות פתוחות (קריאה וכתיבה לכולם)
+create policy "Public Read Content" on content for select using (true);
+create policy "Public Write Content" on content for all using (true);
+
+create policy "Public Read Slides" on hero_slides for select using (true);
+create policy "Public Write Slides" on hero_slides for all using (true);
+
+create policy "Public Read Settings" on general_settings for select using (true);
+create policy "Public Write Settings" on general_settings for all using (true);`;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(sqlCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -572,7 +603,7 @@ alter publication supabase_realtime add table hero_slides;`;
                     
                     {/* LEFT COLUMN: API & Notes */}
                     <div className="space-y-6">
-                         {/* Admin Notes - MOVED HERE & LARGER */}
+                         {/* Admin Notes */}
                         <div className="bg-yellow-50 p-6 rounded-2xl shadow-sm border border-yellow-200">
                              <h4 className="font-bold text-xl mb-3 flex items-center gap-2 text-yellow-800"><StickyNote size={20}/> תזכורות והערות אישיות</h4>
                              <p className="text-sm text-yellow-700 mb-3">אזור אישי לרישום משימות, רעיונות למאמרים ושינויים שצריך לבצע.</p>
@@ -644,64 +675,19 @@ alter publication supabase_realtime add table hero_slides;`;
                                     </button>
                                     {openInstruction === 'supabase_sql' && (
                                         <div className="p-4 bg-white text-sm space-y-3">
-                                            <p>הקוד הזה יוצר את הטבלאות הנדרשות לשמירת המידע. כך מפעילים אותו:</p>
+                                            <p className="text-red-600 font-bold bg-red-50 p-2 rounded border border-red-200">
+                                                חשוב מאוד! הקוד עודכן. עליך להריץ אותו שוב ב-Supabase כדי לפתוח את הגישה לכל המכשירים.
+                                            </p>
                                             <ol className="list-decimal list-inside space-y-1 text-gray-600">
                                                 <li>הכנס לפרויקט שלך ב-Supabase.</li>
-                                                <li>בתפריט בצד שמאל, לחץ על האייקון <strong>SQL Editor</strong>.</li>
-                                                <li>לחץ על <strong>New Query</strong> (למעלה משמאל).</li>
-                                                <li>העתק את הקוד למטה והדבק אותו בחלון העורך.</li>
-                                                <li>לחץ על כפתור <strong>RUN</strong> הירוק בצד ימין למטה.</li>
-                                                <li>וודא שכתוב למטה "Success".</li>
+                                                <li>לחץ על <strong>SQL Editor</strong> בתפריט.</li>
+                                                <li>לחץ על <strong>New Query</strong> והדבק את הקוד.</li>
+                                                <li>לחץ על <strong>RUN</strong>.</li>
                                             </ol>
                                             <div className="relative bg-gray-900 rounded-lg p-3 group mt-2">
                                                 <button onClick={copyToClipboard} className="absolute top-2 left-2 bg-white/20 text-white px-2 py-1 rounded text-xs hover:bg-white/40">{copied ? 'הועתק!' : 'העתק'}</button>
                                                 <pre className="text-blue-300 text-xs overflow-x-auto font-mono dir-ltr text-left h-32 custom-scrollbar">
-                                                    {`-- יצירת טבלאות
-create table if not exists content (
-  id text primary key,
-  type text,
-  hebrew_name text,
-  latin_name text,
-  description text,
-  benefits text[],
-  category text,
-  image_url text,
-  title text,
-  summary text,
-  date text,
-  tags text[],
-  tabs jsonb default '[]'::jsonb,
-  created_at timestamptz default now()
-);
-
-create table if not exists hero_slides (
-  id text primary key,
-  title text,
-  subtitle text,
-  text text,
-  image_url text,
-  is_active boolean default true,
-  display_order int default 0,
-  created_at timestamptz default now()
-);
-
-create table if not exists general_settings (
-  id int primary key default 1,
-  site_name text,
-  therapist_name text,
-  phone text,
-  email text,
-  address text,
-  about_short text,
-  about_long text,
-  gemini_key text,
-  unsplash_key text,
-  admin_notes text
-);
-
-alter publication supabase_realtime add table content;
-alter publication supabase_realtime add table general_settings;
-alter publication supabase_realtime add table hero_slides;`}
+                                                    {sqlCode}
                                                 </pre>
                                             </div>
                                         </div>
@@ -728,10 +714,33 @@ alter publication supabase_realtime add table hero_slides;`}
                                                 <li>בשדה השם כתוב בדיוק: <code className="bg-gray-100 px-1 rounded text-red-600 font-bold">public-images</code></li>
                                                 <li>
                                                     <strong>חשוב מאוד:</strong> הפעל את המתג <span className="font-bold">Public bucket</span> (כך שיהיה ירוק/פעיל).
-                                                    <br/><span className="text-xs text-gray-500">אם לא תעשה זאת, התמונות לא יוצגו באתר.</span>
                                                 </li>
                                                 <li>לחץ על <strong>Save</strong>.</li>
                                             </ol>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {/* 3. Deploy/Env Vars Instructions */}
+                                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                                    <button 
+                                        onClick={() => setOpenInstruction(openInstruction === 'deploy' ? null : 'deploy')}
+                                        className="w-full bg-gray-50 p-4 flex justify-between items-center hover:bg-gray-100 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2 font-bold text-gray-700">
+                                            <Globe size={18}/> 3. הגדרות לשרת (Vercel/Netlify)
+                                        </div>
+                                        {openInstruction === 'deploy' ? <div className="rotate-180">▲</div> : <div>▼</div>}
+                                    </button>
+                                    {openInstruction === 'deploy' && (
+                                        <div className="p-4 bg-white text-sm space-y-3">
+                                            <p className="font-bold text-gray-800">האתר לא מתעדכן במכשירים אחרים?</p>
+                                            <p>אם העלית את האתר לאוויר (למשל דרך Vercel או Netlify), חובה להגדיר שם את המשתנים הבאים:</p>
+                                            <ul className="list-disc list-inside bg-gray-100 p-2 rounded font-mono text-xs">
+                                                <li>VITE_SUPABASE_URL</li>
+                                                <li>VITE_SUPABASE_ANON_KEY</li>
+                                            </ul>
+                                            <p className="text-gray-600 text-xs">את הערכים האלו לוקחים מ-Supabase (תחת Project Settings - API) ושמים בהגדרות ה-Environment Variables בשרת האחסון שלך.</p>
                                         </div>
                                     )}
                                 </div>

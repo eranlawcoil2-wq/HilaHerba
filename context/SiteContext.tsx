@@ -154,7 +154,14 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (contentData && contentData.length > 0) {
         setContent(contentData.map(mapDbToContent));
       } else {
-        setContent([...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES]);
+        // Fallback only if strictly necessary or empty, but prefer empty if DB is connected
+        if (contentData && contentData.length === 0) {
+             // DB is empty, don't show fallback data, show empty
+             setContent([]);
+        } else {
+             // Error or first load fallback
+             setContent([...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES]);
+        }
       }
 
       // 3. Slides
@@ -175,6 +182,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error("Error fetching data:", error);
+      // Fallback on error
       setContent([...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES]);
       setSlides(SLIDES);
     } finally {
@@ -184,6 +192,31 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     fetchData();
+
+    // --- Realtime Subscriptions ---
+    const contentSub = supabase.channel('content-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'content' }, () => {
+        fetchData(); 
+      })
+      .subscribe();
+      
+    const settingsSub = supabase.channel('settings-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'general_settings' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    const slidesSub = supabase.channel('slides-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'hero_slides' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(contentSub);
+      supabase.removeChannel(settingsSub);
+      supabase.removeChannel(slidesSub);
+    };
   }, []);
 
   // --- Actions ---
