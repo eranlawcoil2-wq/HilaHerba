@@ -189,21 +189,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </footer>
 
-      {/* Floating Buttons (Bottom Left) - Swapped Order */}
+      {/* Floating Buttons (Bottom Left) */}
       <div className="fixed bottom-6 left-6 z-40 flex flex-col gap-3">
         
-        {/* WhatsApp Button (Now Top) */}
-        <a 
-            href={`https://wa.me/972${general.phone.replace(/\D/g,'')}`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="w-12 h-12 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-green-300"
-            aria-label="Chat on WhatsApp"
-        >
-            <MessageCircle size={24} />
-        </a>
-
-        {/* Accessibility Menu (Conditional) */}
+        {/* Accessibility Menu (Conditional) - Appears above buttons */}
         <AnimatePresence>
             {isAccessMenuOpen && (
                 <motion.div
@@ -236,7 +225,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             )}
         </AnimatePresence>
 
-        {/* Accessibility Button (Now Bottom) */}
+        {/* Accessibility Button (Now Top) */}
         <button 
             onClick={() => setIsAccessMenuOpen(!isAccessMenuOpen)}
             className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300 relative"
@@ -244,6 +233,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         >
             <Accessibility size={24} />
         </button>
+
+        {/* WhatsApp Button (Now Bottom) */}
+        <a 
+            href={`https://wa.me/972${general.phone.replace(/\D/g,'')}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-12 h-12 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-green-300"
+            aria-label="Chat on WhatsApp"
+        >
+            <MessageCircle size={24} />
+        </a>
 
       </div>
 
