@@ -245,7 +245,7 @@ const Admin: React.FC = () => {
       try {
           const res = await generateAIContent(prompt, 'json');
           
-          // Robust JSON extraction
+          // Robust JSON extraction (This is the NEW FIX)
           let jsonString = res.replace(/```json/g, '').replace(/```/g, '').trim();
           
           // Find the array brackets if there is extra text
@@ -269,6 +269,7 @@ const Admin: React.FC = () => {
       } catch (e: any) {
           console.error("AI Auto Tabs Error:", e);
           const errorMsg = e.message || e.toString();
+          // Show explicit error to the user
           alert(`שגיאה ביצירת טאבים אוטומטית:\n${errorMsg}\n\nנסה שוב או בדוק את המפתח.`);
       } finally {
           setAiLoading(false);
