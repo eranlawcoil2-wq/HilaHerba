@@ -480,175 +480,6 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
              </div>
         )}
 
-        {/* CONTENT TAB */}
-        {activeTab === 'content' && (
-             <div className="max-w-5xl">
-                <div className="flex justify-between items-center mb-8">
-                     <h3 className="text-3xl font-bold text-gray-800">ניהול תכנים</h3>
-                     <button onClick={handleCreateNewContent} className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2"><Plus size={20} /> הוסף תוכן</button>
-                </div>
-
-                {!isEditingContent ? (
-                    <div className="bg-white rounded-2xl shadow border overflow-hidden">
-                        <table className="w-full text-right">
-                             <thead className="bg-gray-50 border-b">
-                                <tr>
-                                    <th className="px-6 py-4">תמונה</th>
-                                    <th className="px-6 py-4">כותרת</th>
-                                    <th className="px-6 py-4">סוג</th>
-                                    <th className="px-6 py-4">פעולות</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {content.map(item => (
-                                    <tr key={item.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4"><img src={item.imageUrl} className="w-10 h-10 rounded object-cover" alt=""/></td>
-                                        <td className="px-6 py-4 font-bold">{item.type === 'plant' ? item.hebrewName : item.title}</td>
-                                        <td className="px-6 py-4"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{item.type}</span></td>
-                                        <td className="px-6 py-4 flex gap-2">
-                                            <button onClick={() => {setEditingItem(JSON.parse(JSON.stringify(item))); setIsEditingContent(true);}} className="text-blue-600"><Edit2 size={18}/></button>
-                                            <button onClick={() => handleDeleteContent(item.id)} className="text-red-600"><Trash2 size={18}/></button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border space-y-6">
-                         <div className="flex justify-between">
-                            <h4 className="font-bold text-xl">עריכת תוכן</h4>
-                            <button onClick={() => setIsEditingContent(false)}>ביטול</button>
-                        </div>
-                        
-                        <div className="grid md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block font-bold text-sm mb-1">סוג</label>
-                                <select 
-                                    value={editingItem?.type} 
-                                    onChange={e => setEditingItem({...editingItem, type: e.target.value as any})}
-                                    className="w-full border p-2 rounded"
-                                >
-                                    <option value="plant">צמח מרפא</option>
-                                    <option value="article">מאמר</option>
-                                    <option value="case_study">מקרה אירוע</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block font-bold text-sm mb-1">תמונה ראשית</label>
-                                <div className="flex gap-2">
-                                    <input type="text" value={editingItem?.imageUrl} onChange={e => setEditingItem({...editingItem, imageUrl: e.target.value})} className="w-full border p-2 rounded ltr" />
-                                     <button 
-                                        onClick={() => { setImagePickerTarget('content'); setShowImagePicker(true); }}
-                                        className="bg-gray-100 px-3 rounded hover:bg-gray-200"
-                                    >
-                                        <ImageIcon size={18}/>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {editingItem?.type === 'plant' ? (
-                            <div className="grid md:grid-cols-2 gap-6">
-                                <div><label className="block font-bold text-sm">שם עברי</label><input type="text" className="w-full border p-2 rounded" value={editingItem.hebrewName} onChange={e => setEditingItem({...editingItem, hebrewName: e.target.value})} /></div>
-                                <div><label className="block font-bold text-sm">שם לטיני</label><input type="text" className="w-full border p-2 rounded" value={editingItem.latinName} onChange={e => setEditingItem({...editingItem, latinName: e.target.value})} /></div>
-                                <div className="md:col-span-2">
-                                     <div className="flex justify-between"><label className="block font-bold text-sm">תיאור קצר</label> <button onClick={() => handleAI('description', `Write a short description (Hebrew) for medicinal plant: ${editingItem.hebrewName}`)}><Sparkles size={16} className="text-purple-500"/></button></div>
-                                     <textarea className="w-full border p-2 rounded" rows={3} value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
-                                </div>
-                                <div><label className="block font-bold text-sm">קטגוריה</label>
-                                    <select className="w-full border p-2 rounded" value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value as any})}>
-                                        <option value="general">כללי</option>
-                                        <option value="relaxing">הרגעה</option>
-                                        <option value="immune">חיסון</option>
-                                        <option value="digestive">עיכול</option>
-                                        <option value="skin">עור</option>
-                                    </select>
-                                </div>
-                                <div><label className="block font-bold text-sm">תגיות/יתרונות (פסיקים)</label><input type="text" className="w-full border p-2 rounded" value={editingItem.benefits?.join(', ')} onChange={e => setEditingItem({...editingItem, benefits: e.target.value.split(',').map(s => s.trim())})} /></div>
-                            </div>
-                        ) : (
-                             <div className="grid gap-6">
-                                <div><label className="block font-bold text-sm">כותרת</label><input type="text" className="w-full border p-2 rounded" value={editingItem?.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} /></div>
-                                <div>
-                                     <div className="flex justify-between"><label className="block font-bold text-sm">תקציר</label> <button onClick={() => handleAI('summary', `Write a summary (Hebrew) for article: ${editingItem?.title}`)}><Sparkles size={16} className="text-purple-500"/></button></div>
-                                     <textarea className="w-full border p-2 rounded" rows={3} value={editingItem?.summary} onChange={e => setEditingItem({...editingItem, summary: e.target.value})} />
-                                </div>
-                                <div><label className="block font-bold text-sm">תגיות (פסיקים)</label><input type="text" className="w-full border p-2 rounded" value={editingItem?.tags?.join(', ')} onChange={e => setEditingItem({...editingItem, tags: e.target.value.split(',').map(s => s.trim())})} /></div>
-                                <div><label className="block font-bold text-sm">תאריך</label><input type="date" className="w-full border p-2 rounded" value={editingItem?.date} onChange={e => setEditingItem({...editingItem, date: e.target.value})} /></div>
-                            </div>
-                        )}
-
-                        {/* Dynamic Tabs Section */}
-                        <div className="border-t pt-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h4 className="font-bold text-lg">תוכן נוסף (טאבים)</h4>
-                                <div className="flex gap-2">
-                                     <button onClick={handleAutoTabs} className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-sm flex items-center gap-1 hover:bg-purple-200" disabled={aiLoading}>
-                                        {aiLoading ? 'חושב...' : <><Sparkles size={14}/> טאבים אוטומטיים</>}
-                                     </button>
-                                     <button 
-                                        onClick={() => setEditingItem(prev => ({...prev, tabs: [...(prev?.tabs || []), { id: Date.now().toString(), title: 'טאב חדש', content: '' }] }))}
-                                        className="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-sm flex items-center gap-1"
-                                     >
-                                        <Plus size={14}/> הוסף טאב
-                                     </button>
-                                </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                                {editingItem?.tabs?.map((tab, idx) => (
-                                    <div key={tab.id} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative group">
-                                        <button 
-                                            onClick={() => setEditingItem(prev => ({...prev, tabs: prev?.tabs?.filter(t => t.id !== tab.id)}))}
-                                            className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                        <div className="mb-2">
-                                            <label className="text-xs font-bold text-gray-500">כותרת הטאב</label>
-                                            <input 
-                                                type="text" 
-                                                className="w-full bg-white border p-2 rounded text-sm font-bold"
-                                                value={tab.title}
-                                                onChange={e => {
-                                                    const newTabs = [...(editingItem.tabs || [])];
-                                                    newTabs[idx].title = e.target.value;
-                                                    setEditingItem({...editingItem, tabs: newTabs});
-                                                }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between">
-                                                <label className="text-xs font-bold text-gray-500">תוכן</label>
-                                                <button onClick={() => handleAI('tab_content', `Write content for tab "${tab.title}" for ${editingItem.hebrewName || editingItem.title}`)}><Sparkles size={14} className="text-purple-400 hover:text-purple-600"/></button>
-                                            </div>
-                                            <textarea 
-                                                rows={5}
-                                                className="w-full bg-white border p-2 rounded text-sm"
-                                                value={tab.content}
-                                                 onChange={e => {
-                                                    const newTabs = [...(editingItem.tabs || [])];
-                                                    newTabs[idx].content = e.target.value;
-                                                    setEditingItem({...editingItem, tabs: newTabs});
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                                {(!editingItem?.tabs || editingItem.tabs.length === 0) && <p className="text-gray-400 text-sm text-center">אין טאבים. הוסף ידנית או השתמש ב-AI.</p>}
-                            </div>
-                        </div>
-
-                        <div className="pt-4 border-t flex gap-4">
-                             <button onClick={handleSaveContent} className="bg-green-600 text-white px-8 py-2 rounded font-bold">שמור פריט</button>
-                             <button onClick={() => setIsEditingContent(false)} className="bg-gray-200 text-gray-800 px-8 py-2 rounded font-bold">ביטול</button>
-                        </div>
-                    </div>
-                )}
-             </div>
-        )}
-
         {/* CONNECTIONS TAB */}
         {activeTab === 'connections' && (
             <div className="max-w-4xl">
@@ -725,7 +556,7 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                                             <div className="space-y-2">
                                                 <strong className="block text-green-700">שלב 1: העתק מ-Supabase</strong>
                                                 <ul className="list-disc list-inside text-gray-600 pl-2">
-                                                    <li>לך להגדרות הפרויקט (Settings) -> <strong>API</strong>.</li>
+                                                    <li>לך להגדרות הפרויקט (Settings) &rarr; <strong>API</strong>.</li>
                                                     <li>העתק את <code>Project URL</code>.</li>
                                                     <li>העתק את <code>anon public</code> key.</li>
                                                 </ul>
@@ -734,7 +565,7 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                                             <div className="space-y-2">
                                                 <strong className="block text-black">שלב 2: הדבק ב-Vercel</strong>
                                                 <ul className="list-disc list-inside text-gray-600 pl-2">
-                                                    <li>לך להגדרות הפרויקט ב-Vercel -> <strong>Environment Variables</strong>.</li>
+                                                    <li>לך להגדרות הפרויקט ב-Vercel &rarr; <strong>Environment Variables</strong>.</li>
                                                     <li>הוסף משתנה בשם <code className="bg-gray-100 px-1 font-bold">VITE_SUPABASE_URL</code> עם הכתובת שהעתקת.</li>
                                                     <li>הוסף משתנה בשם <code className="bg-gray-100 px-1 font-bold">VITE_SUPABASE_ANON_KEY</code> עם המפתח שהעתקת.</li>
                                                     <li>לחץ <strong>Save</strong>.</li>
