@@ -1,18 +1,21 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Hero from '../components/Hero';
-import { PLANTS, ARTICLES } from '../services/data';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ChevronLeft, ChevronRight, Leaf, Search, Filter, Sprout, FileText, BookOpen, X, Check, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Leaf, Search, X, Tag, Video, Sprout, FileText, BookOpen } from 'lucide-react';
 import { Plant, Article, ContentItem } from '../types';
 import { TYPE_LABELS } from '../constants';
 import PlantModal from '../components/PlantModal';
 import ArticleModal from '../components/ArticleModal';
+import { useSite } from '../context/SiteContext';
 
 const Home: React.FC = () => {
+  // Use Dynamic Data
+  const { general, content: allContent } = useSite();
+
   // Filter State
-  const [searchTerm, setSearchTerm] = useState(''); // The actual effective search term used for filtering text
-  const [inputValue, setInputValue] = useState(''); // What the user types
+  const [searchTerm, setSearchTerm] = useState(''); 
+  const [inputValue, setInputValue] = useState(''); 
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -27,19 +30,18 @@ const Home: React.FC = () => {
   // Constants
   const ITEMS_PER_PAGE = 8;
 
-  // Combine Data
-  const allContent: ContentItem[] = useMemo(() => [
-    ...PLANTS.map(p => ({ ...p, type: 'plant' as const })),
-    ...ARTICLES
-  ], []);
-
   // Extract all unique tags
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    PLANTS.forEach(p => p.benefits.forEach(b => tags.add(b)));
-    ARTICLES.forEach(a => a.tags.forEach(t => tags.add(t)));
+    allContent.forEach(item => {
+        if (item.type === 'plant') {
+            item.benefits.forEach(b => tags.add(b));
+        } else {
+            item.tags.forEach(t => tags.add(t));
+        }
+    });
     return Array.from(tags).sort();
-  }, []);
+  }, [allContent]);
 
   // Tag Suggestions Logic
   const tagSuggestions = useMemo(() => {
@@ -142,9 +144,9 @@ const Home: React.FC = () => {
       setSelectedArticle(null);
 
       if (item.type === 'plant') {
-          setSelectedPlant(item);
+          setSelectedPlant(item as Plant);
       } else {
-          setSelectedArticle(item);
+          setSelectedArticle(item as Article);
       }
   };
 
@@ -177,7 +179,7 @@ const Home: React.FC = () => {
                 transition={{ duration: 0.8 }}
                 className="relative"
             >
-                <div className="relative h-[500px] w-full rounded-t-[200px] rounded-b-[20px] overflow-hidden border-2 border-white/10">
+                <div className="relative h-[350px] md:h-[500px] w-full rounded-t-[100px] md:rounded-t-[200px] rounded-b-[20px] overflow-hidden border-2 border-white/10">
                     <img 
                         src="https://picsum.photos/seed/portrait/600/800" 
                         alt="Herbalist Portrait" 
@@ -185,8 +187,9 @@ const Home: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-green-900/20 mix-blend-multiply"></div>
                 </div>
-                <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-[#D2B48C] rounded-full flex items-center justify-center text-[#1a2e1a] font-serif font-bold text-center leading-tight shadow-xl">
-                    15+<br/><span className="text-xs font-sans font-normal">שנות ניסיון</span>
+                <div className="absolute -bottom-6 -right-6 w-32 h-32 md:w-36 md:h-36 bg-[#D2B48C] rounded-full flex flex-col items-center justify-center text-[#1a2e1a] text-center leading-tight shadow-xl p-4 z-20">
+                    <Video size={28} className="mb-2 opacity-80" />
+                    <span className="text-xs md:text-sm font-bold leading-tight">פגישות ייעוץ<br/>גם בזום</span>
                 </div>
             </motion.div>
 
@@ -199,30 +202,20 @@ const Home: React.FC = () => {
                 <span className="text-green-300 font-medium tracking-widest uppercase text-sm mb-4 block">
                     נעים להכיר
                 </span>
-                <h2 className="text-4xl md:text-5xl font-serif font-bold mb-6 leading-tight">
-                    שמי נעה,<br/> מטפלת בצמחי מרפא
+                <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+                    שמי {general.therapistName},<br/> מטפלת בצמחי מרפא
                 </h2>
                 <div className="w-20 h-1 bg-green-500 mb-8"></div>
                 
-                <p className="text-gray-300 text-lg leading-relaxed mb-6">
-                    החיבור שלי לעולם הצמחים התחיל עוד בילדות, בטיולים בטבע ובליקוט צמחים עם סבתי.
-                    אני מאמינה שליקוט, הכנה ורקיחה הם חלק בלתי נפרד מתהליך הריפוי.
-                </p>
-                <p className="text-gray-300 text-lg leading-relaxed mb-10">
-                    בקליניקה שלי אני משלבת ידע מסורתי עתיק עם הבנה מדעית מודרנית ופתולוגיה מערבית,
-                    כדי להעניק לגוף את הכלים המדויקים להם הוא זקוק כדי לרפא את עצמו. כל מטופל מקבל יחס אישי והתאמה של פורמולות ייחודיות.
+                <p className="text-gray-300 text-lg leading-relaxed mb-10 whitespace-pre-line">
+                    {general.aboutLong}
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4">
-                    <Link 
-                        to="/about" 
-                        className="px-8 py-3 bg-white text-[#1a2e1a] rounded-full font-bold hover:bg-green-50 transition-colors flex items-center justify-center gap-2"
-                    >
-                        קראו עוד עלי
-                    </Link>
+                     {/* Removed "Read more about me" button as requested */}
                     <Link 
                         to="/contact" 
-                        className="px-8 py-3 border border-white/30 text-white rounded-full hover:bg-white/10 transition-colors flex items-center justify-center"
+                        className="px-8 py-3 bg-white text-[#1a2e1a] rounded-full font-bold hover:bg-green-50 transition-colors flex items-center justify-center gap-2"
                     >
                         תיאום פגישה
                     </Link>
@@ -237,7 +230,7 @@ const Home: React.FC = () => {
       <section className="py-24 bg-[#FAF9F6]">
         <div className="container mx-auto px-6 max-w-7xl">
           <div className="mb-12">
-             <h3 className="text-3xl font-serif font-bold text-[#1a2e1a] mb-2 text-center md:text-right">מרכז הידע</h3>
+             <h3 className="text-3xl font-bold text-[#1a2e1a] mb-2 text-center md:text-right">מרכז הידע</h3>
              <p className="text-gray-500 text-center md:text-right">חיפוש בכל המאמרים, הצמחים ומקרי האירוע</p>
           </div>
 
@@ -356,14 +349,14 @@ const Home: React.FC = () => {
                              {/* Top Section */}
                              <div className="px-5 pt-5 pb-3 bg-white z-10">
                                  <div className="flex justify-between items-start mb-1">
-                                     <h3 className="text-xl font-serif font-bold text-gray-800 group-hover:text-green-800 transition-colors line-clamp-1">
+                                     <h3 className="text-xl font-bold text-gray-800 group-hover:text-green-800 transition-colors line-clamp-1">
                                          {item.type === 'plant' ? item.hebrewName : item.title}
                                      </h3>
                                      <div className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider text-white ${badge.color}`}>
                                         {badge.icon} {badge.label}
                                      </div>
                                  </div>
-                                 <p className="text-sm text-gray-400 italic font-serif">
+                                 <p className="text-sm text-gray-400 italic">
                                      {item.type === 'plant' ? item.latinName : item.date}
                                  </p>
                              </div>

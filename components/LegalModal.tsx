@@ -72,7 +72,7 @@ const LegalModal: React.FC<LegalModalProps> = ({ type, onClose }) => {
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
            <div className="flex items-center gap-3">
               {content.icon}
-              <h3 className="text-xl font-serif font-bold text-gray-800">{content.title}</h3>
+              <h3 className="text-xl font-bold text-gray-800">{content.title}</h3>
            </div>
            <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
              <X size={20} />

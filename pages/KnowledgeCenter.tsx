@@ -1,13 +1,15 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { PLANTS, ARTICLES } from '../services/data';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, ChevronRight, ChevronLeft, Sprout, FileText, BookOpen, X, Check, Tag } from 'lucide-react';
 import { Plant, Article, ContentItem } from '../types';
 import { TYPE_LABELS } from '../constants';
 import PlantModal from '../components/PlantModal';
 import ArticleModal from '../components/ArticleModal';
+import { useSite } from '../context/SiteContext';
 
 const KnowledgeCenter: React.FC = () => {
+  const { content: allContent } = useSite();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [inputValue, setInputValue] = useState(''); // What the user types
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -24,19 +26,18 @@ const KnowledgeCenter: React.FC = () => {
   // Constants
   const ITEMS_PER_PAGE = 9;
 
-  // Combine Data
-  const allContent: ContentItem[] = useMemo(() => [
-    ...PLANTS.map(p => ({ ...p, type: 'plant' as const })),
-    ...ARTICLES
-  ], []);
-
   // Extract all unique tags/benefits
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    PLANTS.forEach(p => p.benefits.forEach(b => tags.add(b)));
-    ARTICLES.forEach(a => a.tags.forEach(t => tags.add(t)));
+    allContent.forEach(item => {
+        if (item.type === 'plant') {
+            item.benefits.forEach(b => tags.add(b));
+        } else {
+            item.tags.forEach(t => tags.add(t));
+        }
+    });
     return Array.from(tags).sort();
-  }, []);
+  }, [allContent]);
 
   // Tag Suggestions Logic
   const tagSuggestions = useMemo(() => {
@@ -145,9 +146,9 @@ const KnowledgeCenter: React.FC = () => {
       setSelectedArticle(null);
       
       if (item.type === 'plant') {
-          setSelectedPlant(item);
+          setSelectedPlant(item as Plant);
       } else {
-          setSelectedArticle(item);
+          setSelectedArticle(item as Article);
       }
   };
 
@@ -165,15 +166,25 @@ const KnowledgeCenter: React.FC = () => {
     <div className="bg-[#FAF9F6] min-h-screen pb-20 relative">
       
       {/* Header Background Only */}
-      <div className="bg-[#1a2e1a] pt-32 pb-24 text-white rounded-b-[3rem] shadow-xl relative overflow-hidden">
+      <div 
+        className="pt-32 pb-24 text-white rounded-b-[3rem] shadow-xl relative overflow-hidden"
+        style={{
+            backgroundImage: 'url("https://picsum.photos/seed/herbal_bg_2/1600/600")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+        }}
+      >
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/50 z-0"></div>
+
         {/* Background Pattern */}
-        <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none z-0">
              <div className="absolute right-10 top-10 w-64 h-64 rounded-full border-4 border-white/20"></div>
              <div className="absolute left-20 bottom-10 w-40 h-40 rounded-full border-4 border-white/10"></div>
         </div>
 
         <div className="container mx-auto px-6 text-center relative z-10">
-          <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4">מרכז הידע</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">מרכז הידע</h1>
           <p className="text-green-100 max-w-xl mx-auto text-lg font-light">
             מאגר המידע השלם: צמחי מרפא, מאמרים מקצועיים ומקרי אירוע.
           </p>
@@ -275,7 +286,7 @@ const KnowledgeCenter: React.FC = () => {
             </div>
         )}
 
-        {/* Content Grid */}
+        {/* Content Grid / Scroll */}
         <div className="relative min-h-[300px]">
              <AnimatePresence mode="wait">
                 <motion.div 
@@ -284,7 +295,7 @@ const KnowledgeCenter: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                    className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible pb-8 md:pb-0 px-6 md:px-0 -mx-6 md:mx-0 scroll-smooth snap-x snap-mandatory"
                 >
                     {currentItems.map((item) => {
                         const badge = getBadgeConfig(item.type);
@@ -295,7 +306,7 @@ const KnowledgeCenter: React.FC = () => {
                             layoutId={(item.type === 'plant' ? 'plant-' : 'article-') + item.id}
                             whileHover={{ y: -8 }}
                             onClick={() => handleCardClick(item)}
-                            className="bg-white rounded-[1.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col h-[400px] border border-gray-100 group"
+                            className="bg-white rounded-[1.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col h-[400px] border border-gray-100 group min-w-[40vw] md:min-w-0 snap-center"
                         >
                             {/* Image Section */}
                             <div className="relative h-56 overflow-hidden">
@@ -316,7 +327,7 @@ const KnowledgeCenter: React.FC = () => {
                             {/* Content Section */}
                             <div className="p-6 flex flex-col flex-grow">
                                 <div className="mb-auto">
-                                    <h3 className="text-2xl font-serif font-bold text-gray-800 mb-2 group-hover:text-green-800 transition-colors line-clamp-1">
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-2 group-hover:text-green-800 transition-colors line-clamp-1">
                                         {item.type === 'plant' ? item.hebrewName : item.title}
                                     </h3>
                                     
@@ -347,9 +358,9 @@ const KnowledgeCenter: React.FC = () => {
              </AnimatePresence>
         </div>
 
-        {/* Pagination Controls */}
+        {/* Pagination Controls - Hidden on mobile if horizontal scrolling is sufficient, or kept for full navigation */}
         {filteredContent.length > 0 && (
-          <div className="flex justify-center items-center mt-16 gap-6">
+          <div className="flex justify-center items-center mt-8 md:mt-16 gap-6">
                 <button 
                     onClick={prevPage} 
                     disabled={currentPage === 0}

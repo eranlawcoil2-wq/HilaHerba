@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Leaf, Droplet, AlertTriangle, BookOpen, ArrowLeft, Sprout, FileText } from 'lucide-react';
 import { Plant, ContentItem } from '../types';
-import { PLANTS, ARTICLES } from '../services/data';
 import { TYPE_LABELS } from '../constants';
+import { useSite } from '../context/SiteContext';
 
 interface PlantModalProps {
   plant: Plant;
@@ -13,14 +13,10 @@ interface PlantModalProps {
 
 const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem }) => {
     const [activeTab, setActiveTab] = useState<'general' | 'benefits' | 'usage'>('general');
+    const { content: allContent } = useSite();
 
     // Calculate related items
     const relatedItems: ContentItem[] = useMemo(() => {
-        const allContent: ContentItem[] = [
-            ...PLANTS.map(p => ({ ...p, type: 'plant' as const })),
-            ...ARTICLES
-        ];
-
         return allContent
             .filter(item => {
                 // Remove self
@@ -33,7 +29,7 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
                 return plant.benefits.some(tag => itemTags.includes(tag));
             })
             .slice(0, 4); // Limit to 4
-    }, [plant]);
+    }, [plant, allContent]);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -54,53 +50,64 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
             >
                 <button 
                     onClick={onClose}
-                    className="absolute top-4 left-4 z-20 bg-white/80 p-2 rounded-full text-gray-800 hover:bg-white transition-colors"
+                    className="absolute top-4 left-4 z-30 bg-white/80 p-2 rounded-full text-gray-800 hover:bg-white transition-colors shadow-sm"
                 >
                     <X size={20} />
                 </button>
 
                 {/* Left Side (Desktop) / Top (Mobile) - Image */}
-                <div className="w-full md:w-5/12 h-48 md:h-full relative flex-shrink-0">
+                <div className="w-full md:w-5/12 h-64 md:h-full relative flex-shrink-0">
                     <img 
                         src={plant.imageUrl} 
                         alt={plant.hebrewName} 
                         className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1a2e1a]/80 to-transparent md:bg-gradient-to-r md:from-transparent md:to-[#1a2e1a]/20"></div>
-                    <div className="absolute bottom-6 right-6 text-white md:hidden">
-                        <h2 className="text-3xl font-serif font-bold">{plant.hebrewName}</h2>
-                        <p className="text-green-100 italic">{plant.latinName}</p>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1a2e1a]/90 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-[#1a2e1a]/20"></div>
+                    
+                    {/* Tags overlay on image - Visible on Mobile & Desktop */}
+                    <div className="absolute bottom-4 right-4 left-4 z-20 flex flex-col gap-2">
+                         <div className="flex flex-wrap gap-1.5">
+                            {plant.benefits.slice(0, 4).map((benefit, i) => (
+                                <span key={i} className="bg-black/30 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-full border border-white/20 shadow-sm">
+                                    {benefit}
+                                </span>
+                            ))}
+                        </div>
+                        <div className="text-white md:hidden mt-1">
+                            <h2 className="text-3xl font-bold leading-tight">{plant.hebrewName}</h2>
+                            <p className="text-green-100 italic text-sm opacity-90">{plant.latinName}</p>
+                        </div>
                     </div>
                 </div>
 
                 {/* Right Side - Content & Tabs */}
-                <div className="w-full md:w-7/12 flex flex-col bg-[#FAF9F6] overflow-hidden">
+                <div className="w-full md:w-7/12 flex flex-col bg-[#FAF9F6] overflow-hidden relative rounded-t-3xl md:rounded-none -mt-4 md:mt-0 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-none">
                     
                     {/* Header (Desktop only) */}
                     <div className="hidden md:block p-8 pb-0">
-                         <h2 className="text-4xl font-serif font-bold text-[#1a2e1a] mb-1">{plant.hebrewName}</h2>
-                         <p className="text-gray-500 italic font-serif text-lg">{plant.latinName}</p>
+                         <h2 className="text-4xl font-bold text-[#1a2e1a] mb-1">{plant.hebrewName}</h2>
+                         <p className="text-gray-500 italic text-lg">{plant.latinName}</p>
                     </div>
 
                     {/* Tabs Navigation */}
-                    <div className="flex items-center gap-6 px-8 mt-6 border-b border-gray-200 flex-shrink-0">
+                    <div className="flex items-center gap-6 px-4 md:px-8 mt-6 border-b border-gray-200 flex-shrink-0 overflow-x-auto">
                         <button 
                             onClick={() => setActiveTab('general')}
-                            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'general' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === 'general' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             כללי
                             {activeTab === 'general' && <motion.div layoutId="tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
                         </button>
                         <button 
                             onClick={() => setActiveTab('benefits')}
-                            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'benefits' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === 'benefits' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             יתרונות רפואיים
                             {activeTab === 'benefits' && <motion.div layoutId="tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
                         </button>
                         <button 
                             onClick={() => setActiveTab('usage')}
-                            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'usage' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === 'usage' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             שימוש ובטיחות
                             {activeTab === 'usage' && <motion.div layoutId="tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
@@ -109,7 +116,7 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
 
                     {/* Scrollable Content Area */}
                     <div className="overflow-y-auto flex-grow custom-scrollbar">
-                        <div className="p-8 pb-4 min-h-[300px]">
+                        <div className="p-6 md:p-8 pb-4 min-h-[300px]">
                             <AnimatePresence mode="wait">
                                 {activeTab === 'general' && (
                                     <motion.div 
@@ -192,7 +199,7 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
                          {/* Related Items Section */}
                         {relatedItems.length > 0 && (
                             <div className="bg-gray-50 border-t border-gray-200 p-8">
-                                <h3 className="text-lg font-serif font-bold text-gray-800 mb-4">תכנים נוספים שעשויים לעניין אותך</h3>
+                                <h3 className="text-lg font-bold text-gray-800 mb-4">תכנים נוספים שעשויים לעניין אותך</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     {relatedItems.map((item, idx) => (
                                         <div 

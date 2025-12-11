@@ -46,7 +46,7 @@ const Hero: React.FC = () => {
   const activeSlide = SLIDES[currentSlide];
 
   return (
-    <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-[#FAF9F6] pt-20 md:pt-0">
+    <section className="relative min-h-auto md:min-h-[85vh] flex items-center overflow-hidden bg-[#FAF9F6] pt-32 pb-20 md:pt-0 md:pb-0">
       
       {/* Container - Grid Layout */}
       {/* RTL: First element is Right, Second element is Left */}
@@ -68,17 +68,17 @@ const Hero: React.FC = () => {
                     <span>{activeSlide.subtitle}</span>
                   </div>
                   
-                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-[#1a2e1a] mb-6 leading-tight">
+                  <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-[#1a2e1a] mb-6 leading-tight whitespace-nowrap">
                     {activeSlide.title}
                   </h1>
                   
-                  <p className="text-xl text-gray-600 mb-10 leading-relaxed font-light max-w-lg">
+                  <p className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed font-light max-w-lg">
                     {activeSlide.text}
                   </p>
 
                   <div className="flex justify-start gap-4">
                     <Link 
-                      to="/about" 
+                      to="/contact" 
                       className="group px-8 py-3 bg-[#1a2e1a] text-white rounded-full font-medium hover:bg-green-800 transition-all flex items-center gap-3 shadow-lg hover:shadow-xl hover:-translate-y-1"
                     >
                       <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1" />
@@ -111,11 +111,11 @@ const Hero: React.FC = () => {
         </div>
 
         {/* LEFT SIDE (Second in RTL): Image */}
-        <div className="relative h-[50vh] md:h-[65vh] w-full order-2 md:order-2">
+        <div className="relative h-[40vh] md:h-[65vh] w-full order-2 md:order-2">
             <AnimatePresence mode="wait">
                 <motion.div 
                     key={activeSlide.id}
-                    className="w-full h-full rounded-[3rem] overflow-hidden shadow-2xl relative"
+                    className="w-full h-full rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl relative"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
@@ -131,8 +131,8 @@ const Hero: React.FC = () => {
             </AnimatePresence>
             
             {/* Decorative Circle behind image */}
-            <div className="absolute -top-8 -left-8 w-64 h-64 bg-green-100/50 rounded-full -z-10 blur-3xl"></div>
-            <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-[#D2B48C]/30 rounded-full -z-10 blur-2xl"></div>
+            <div className="absolute -top-8 -left-8 w-40 h-40 md:w-64 md:h-64 bg-green-100/50 rounded-full -z-10 blur-3xl"></div>
+            <div className="absolute -bottom-8 -right-8 w-32 h-32 md:w-48 md:h-48 bg-[#D2B48C]/30 rounded-full -z-10 blur-2xl"></div>
         </div>
 
       </div>

@@ -3,8 +3,7 @@ import { NavItem } from './types';
 export const NAV_ITEMS: NavItem[] = [
   { label: 'בית', path: '/' },
   { label: 'מרכז הידע', path: '/knowledge' }, // Unified page
-  { label: 'אודות', path: '/about' },
-  { label: 'צור קשר', path: '/contact' },
+  { label: 'אודות וצור קשר', path: '/contact' },
 ];
 
 export const THEME_COLORS = {
