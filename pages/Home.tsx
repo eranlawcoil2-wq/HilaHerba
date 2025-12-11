@@ -234,15 +234,15 @@ const Home: React.FC = () => {
              <p className="text-gray-500 text-center md:text-right">חיפוש בכל המאמרים, הצמחים ומקרי האירוע</p>
           </div>
 
-          {/* Toolbar */}
-          <div className="bg-white rounded-2xl shadow-xl p-2 md:p-3 flex flex-col md:flex-row justify-between items-center gap-4 border border-gray-100 mb-12 relative z-20">
-             {/* Right: Types */}
+          {/* Toolbar - Mobile: Stacked, Desktop: Row */}
+          <div className="bg-white rounded-2xl shadow-xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 border border-gray-100 mb-12 relative z-20">
+             {/* Line 1: Type Pills */}
              <div className="flex flex-wrap justify-center md:justify-start gap-2 w-full md:w-auto">
                 {['all', 'plant', 'article', 'case_study'].map(type => (
                     <button
                         key={type}
                         onClick={() => setSelectedType(type)}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex-grow md:flex-grow-0 ${
                             selectedType === type 
                             ? 'bg-[#1a2e1a] text-white shadow-md' 
                             : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
@@ -253,7 +253,7 @@ const Home: React.FC = () => {
                 ))}
             </div>
 
-            {/* Left: Search Only (Tag Browser Removed) */}
+            {/* Line 2: Search */}
             <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto items-center">
                  
                  {/* Search Input with Autocomplete */}
@@ -325,7 +325,7 @@ const Home: React.FC = () => {
             </div>
           )}
 
-          {/* Grid */}
+          {/* Grid / Carousel on Mobile */}
           <div className="relative min-h-[300px]">
              <AnimatePresence mode="wait">
                  <motion.div 
@@ -334,7 +334,7 @@ const Home: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+                    className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 overflow-x-auto md:overflow-visible pb-8 md:pb-0 px-6 md:px-0 -mx-6 md:mx-0 scroll-smooth snap-x snap-mandatory"
                  >
                     {currentItems.map((item) => {
                          const badge = getBadgeConfig(item.type);
@@ -344,7 +344,7 @@ const Home: React.FC = () => {
                             layoutId={(item.type === 'plant' ? 'plant-' : 'article-') + item.id}
                             whileHover={{ y: -8, scale: 1.02 }}
                             onClick={() => handleCardClick(item)}
-                            className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col h-[320px] border border-gray-100 group relative"
+                            className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col h-[320px] border border-gray-100 group relative min-w-[40vw] md:min-w-0 snap-center"
                           >
                              {/* Top Section */}
                              <div className="px-5 pt-5 pb-3 bg-white z-10">
@@ -391,7 +391,7 @@ const Home: React.FC = () => {
 
           {/* Pagination */}
           {filteredContent.length > 0 && (
-            <div className="flex justify-center items-center mt-12 gap-6">
+            <div className="flex justify-center items-center mt-8 md:mt-12 gap-6">
                  <button 
                         onClick={prevPage} 
                         disabled={currentPage === 0}

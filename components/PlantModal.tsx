@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Leaf, Droplet, AlertTriangle, BookOpen, ArrowLeft, Sprout, FileText } from 'lucide-react';
+import { X, Leaf, BookOpen, Sprout, FileText } from 'lucide-react';
 import { Plant, ContentItem } from '../types';
 import { TYPE_LABELS } from '../constants';
 import { useSite } from '../context/SiteContext';
@@ -12,24 +12,22 @@ interface PlantModalProps {
 }
 
 const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem }) => {
-    const [activeTab, setActiveTab] = useState<'general' | 'benefits' | 'usage'>('general');
+    const [activeTabId, setActiveTabId] = useState<string>('general');
     const { content: allContent } = useSite();
 
     // Calculate related items
     const relatedItems: ContentItem[] = useMemo(() => {
         return allContent
             .filter(item => {
-                // Remove self
                 if (item.type === 'plant' && item.id === plant.id) return false;
-                
-                // Get tags for comparison
                 const itemTags = item.type === 'plant' ? item.benefits : item.tags;
-                
-                // Check for intersection
                 return plant.benefits.some(tag => itemTags.includes(tag));
             })
-            .slice(0, 4); // Limit to 4
+            .slice(0, 4);
     }, [plant, allContent]);
+
+    // Ensure we have tabs, if empty create default
+    const tabs = plant.tabs && plant.tabs.length > 0 ? plant.tabs : [];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -55,7 +53,7 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
                     <X size={20} />
                 </button>
 
-                {/* Left Side (Desktop) / Top (Mobile) - Image */}
+                {/* Left Side Image */}
                 <div className="w-full md:w-5/12 h-64 md:h-full relative flex-shrink-0">
                     <img 
                         src={plant.imageUrl} 
@@ -64,7 +62,6 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1a2e1a]/90 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-[#1a2e1a]/20"></div>
                     
-                    {/* Tags overlay on image - Visible on Mobile & Desktop */}
                     <div className="absolute bottom-4 right-4 left-4 z-20 flex flex-col gap-2">
                          <div className="flex flex-wrap gap-1.5">
                             {plant.benefits.slice(0, 4).map((benefit, i) => (
@@ -80,10 +77,9 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
                     </div>
                 </div>
 
-                {/* Right Side - Content & Tabs */}
+                {/* Right Side Content */}
                 <div className="w-full md:w-7/12 flex flex-col bg-[#FAF9F6] overflow-hidden relative rounded-t-3xl md:rounded-none -mt-4 md:mt-0 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-none">
                     
-                    {/* Header (Desktop only) */}
                     <div className="hidden md:block p-8 pb-0">
                          <h2 className="text-4xl font-bold text-[#1a2e1a] mb-1">{plant.hebrewName}</h2>
                          <p className="text-gray-500 italic text-lg">{plant.latinName}</p>
@@ -92,33 +88,30 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
                     {/* Tabs Navigation */}
                     <div className="flex items-center gap-6 px-4 md:px-8 mt-6 border-b border-gray-200 flex-shrink-0 overflow-x-auto">
                         <button 
-                            onClick={() => setActiveTab('general')}
-                            className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === 'general' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
+                            onClick={() => setActiveTabId('general')}
+                            className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTabId === 'general' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             כללי
-                            {activeTab === 'general' && <motion.div layoutId="tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
+                            {activeTabId === 'general' && <motion.div layoutId="tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
                         </button>
-                        <button 
-                            onClick={() => setActiveTab('benefits')}
-                            className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === 'benefits' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
-                        >
-                            יתרונות רפואיים
-                            {activeTab === 'benefits' && <motion.div layoutId="tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('usage')}
-                            className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === 'usage' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
-                        >
-                            שימוש ובטיחות
-                            {activeTab === 'usage' && <motion.div layoutId="tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
-                        </button>
+                        
+                        {tabs.map(tab => (
+                            <button 
+                                key={tab.id}
+                                onClick={() => setActiveTabId(tab.id)}
+                                className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTabId === tab.id ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
+                            >
+                                {tab.title}
+                                {activeTabId === tab.id && <motion.div layoutId="tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
+                            </button>
+                        ))}
                     </div>
 
-                    {/* Scrollable Content Area */}
+                    {/* Content */}
                     <div className="overflow-y-auto flex-grow custom-scrollbar">
                         <div className="p-6 md:p-8 pb-4 min-h-[300px]">
                             <AnimatePresence mode="wait">
-                                {activeTab === 'general' && (
+                                {activeTabId === 'general' ? (
                                     <motion.div 
                                         key="general"
                                         initial={{ opacity: 0, y: 10 }}
@@ -128,7 +121,7 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
                                     >
                                         <div className="flex items-start gap-3">
                                             <BookOpen className="text-green-600 mt-1 flex-shrink-0" size={20} />
-                                            <p className="text-gray-600 leading-relaxed text-lg">
+                                            <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">
                                                 {plant.description}
                                             </p>
                                         </div>
@@ -139,64 +132,45 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
                                                 <span className="text-gray-600 capitalize">{plant.category}</span>
                                             </div>
                                         </div>
-                                    </motion.div>
-                                )}
-
-                                {activeTab === 'benefits' && (
-                                    <motion.div 
-                                        key="benefits"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                    >
-                                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                            <Leaf className="text-green-600" size={20} />
-                                            סגולות עיקריות
-                                        </h3>
-                                        <ul className="grid gap-3">
-                                            {plant.benefits.map((benefit, idx) => (
-                                                <li key={idx} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-50 shadow-sm">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
-                                                    <span className="text-gray-700">{benefit}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </motion.div>
-                                )}
-
-                                {activeTab === 'usage' && (
-                                    <motion.div 
-                                        key="usage"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        className="space-y-6"
-                                    >
-                                        <div>
-                                            <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                                <Droplet className="text-blue-500" size={20} />
-                                                אופן השימוש
-                                            </h3>
-                                            <p className="text-gray-600 leading-relaxed bg-blue-50/50 p-4 rounded-xl">
-                                                {plant.usage}
-                                            </p>
-                                        </div>
-
-                                        <div>
-                                            <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                                <AlertTriangle className="text-amber-500" size={20} />
-                                                בטיחות והתוויות נגד
-                                            </h3>
-                                            <p className="text-gray-600 leading-relaxed bg-amber-50/50 p-4 rounded-xl border border-amber-100">
-                                                {plant.precautions}
-                                            </p>
+                                        
+                                        <div className="mt-4">
+                                            <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                                <Leaf className="text-green-600" size={16} />
+                                                סגולות עיקריות
+                                            </h4>
+                                            <ul className="grid gap-2">
+                                                {plant.benefits.map((benefit, idx) => (
+                                                    <li key={idx} className="flex items-center gap-3 bg-white p-2 px-3 rounded-lg border border-gray-50 text-sm">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                                                        <span className="text-gray-700">{benefit}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
                                         </div>
                                     </motion.div>
+                                ) : (
+                                    tabs.map(tab => {
+                                        if (tab.id !== activeTabId) return null;
+                                        return (
+                                            <motion.div 
+                                                key={tab.id}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className="space-y-4"
+                                            >
+                                                <h3 className="font-bold text-gray-800 text-lg border-b pb-2">{tab.title}</h3>
+                                                <div className="text-gray-600 leading-relaxed whitespace-pre-line">
+                                                    {tab.content}
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })
                                 )}
                             </AnimatePresence>
                         </div>
 
-                         {/* Related Items Section */}
+                         {/* Related Items */}
                         {relatedItems.length > 0 && (
                             <div className="bg-gray-50 border-t border-gray-200 p-8">
                                 <h3 className="text-lg font-bold text-gray-800 mb-4">תכנים נוספים שעשויים לעניין אותך</h3>
@@ -221,12 +195,6 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
                                                 <h4 className="text-sm font-bold text-gray-800 truncate group-hover:text-green-700 transition-colors">
                                                     {item.type === 'plant' ? item.hebrewName : item.title}
                                                 </h4>
-                                                <div className="flex items-center gap-1 mt-1">
-                                                    <span className="text-[10px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                                         {item.type === 'plant' ? <Sprout size={8} /> : <FileText size={8} />}
-                                                         {item.type === 'plant' ? item.benefits[0] : item.tags[0]}
-                                                    </span>
-                                                </div>
                                             </div>
                                         </div>
                                     ))}

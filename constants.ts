@@ -24,7 +24,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export const TYPE_LABELS: Record<string, string> = {
-  all: 'כל התכנים',
+  all: 'הכל',
   plant: 'צמחי מרפא',
   article: 'מאמרים',
   case_study: 'מקרי אירוע'

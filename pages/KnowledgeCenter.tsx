@@ -193,16 +193,16 @@ const KnowledgeCenter: React.FC = () => {
 
       <div className="container mx-auto px-6 max-w-7xl relative z-20 -mt-8">
         
-        {/* Unified Toolbar */}
-        <div className="bg-white rounded-2xl shadow-xl p-2 md:p-3 flex flex-col md:flex-row justify-between items-center gap-4 border border-gray-100 mb-12">
+        {/* Unified Toolbar - Mobile Stacked */}
+        <div className="bg-white rounded-2xl shadow-xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 border border-gray-100 mb-12">
             
-            {/* RIGHT SIDE: Type Pills */}
+            {/* Line 1: Type Pills */}
             <div className="flex flex-wrap justify-center md:justify-start gap-2 w-full md:w-auto">
                 {['all', 'plant', 'article', 'case_study'].map(type => (
                     <button
                         key={type}
                         onClick={() => setSelectedType(type)}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex-grow md:flex-grow-0 ${
                             selectedType === type 
                             ? 'bg-[#1a2e1a] text-white shadow-md' 
                             : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
@@ -213,7 +213,7 @@ const KnowledgeCenter: React.FC = () => {
                 ))}
             </div>
 
-            {/* LEFT SIDE: Search Only (Tag Browser Removed) */}
+            {/* Line 2: Search */}
             <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto items-center">
                 
                 {/* Search Input with Autocomplete */}
@@ -306,7 +306,7 @@ const KnowledgeCenter: React.FC = () => {
                             layoutId={(item.type === 'plant' ? 'plant-' : 'article-') + item.id}
                             whileHover={{ y: -8 }}
                             onClick={() => handleCardClick(item)}
-                            className="bg-white rounded-[1.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col h-[400px] border border-gray-100 group min-w-[40vw] md:min-w-0 snap-center"
+                            className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col h-[400px] border border-gray-100 group min-w-[40vw] md:min-w-0 snap-center"
                         >
                             {/* Image Section */}
                             <div className="relative h-56 overflow-hidden">
@@ -358,7 +358,7 @@ const KnowledgeCenter: React.FC = () => {
              </AnimatePresence>
         </div>
 
-        {/* Pagination Controls - Hidden on mobile if horizontal scrolling is sufficient, or kept for full navigation */}
+        {/* Pagination Controls */}
         {filteredContent.length > 0 && (
           <div className="flex justify-center items-center mt-8 md:mt-16 gap-6">
                 <button 
