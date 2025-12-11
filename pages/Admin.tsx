@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, HelpCircle, StickyNote, Server, HardDrive, Globe, MapPin, Key } from 'lucide-react';
-import { ContentItem, Slide } from '../types';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, HelpCircle, StickyNote, Server, HardDrive, Globe, MapPin, Key, AlertTriangle, DownloadCloud } from 'lucide-react';
+import { ContentItem, Slide, Plant, Article } from '../types';
+import { PLANTS, ARTICLES, SLIDES as DEMO_SLIDES } from '../services/data';
 
 type Tab = 'general' | 'content' | 'slides' | 'connections';
 
@@ -30,6 +31,7 @@ const Admin: React.FC = () => {
 
   const [copied, setCopied] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [isLoadingDemo, setIsLoadingDemo] = useState(false);
   
   // Image Picker State
   const [showImagePicker, setShowImagePicker] = useState(false);
@@ -39,13 +41,51 @@ const Admin: React.FC = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
 
   // Accordion State for Instructions
-  const [openInstruction, setOpenInstruction] = useState<'gemini' | 'unsplash' | 'supabase_sql' | 'supabase_storage' | 'deploy' | null>(null);
+  const [openInstruction, setOpenInstruction] = useState<'supabase_sql' | 'supabase_storage' | 'deploy' | null>('deploy');
 
   // --- Handlers ---
 
-  const handleGeneralSave = () => {
-    updateGeneral(generalForm);
-    alert('הגדרות נשמרו בהצלחה!');
+  const handleGeneralSave = async () => {
+    try {
+        await updateGeneral(generalForm);
+        alert('הגדרות נשמרו בהצלחה!');
+    } catch (error) {
+        alert('שגיאה בשמירה. וודא שהאתר מחובר למסד הנתונים ושביצעת את שלב ה-SQL.');
+    }
+  };
+
+  const handleLoadDemoData = async () => {
+    if (!confirm('האם להטעין את נתוני ההדגמה (צמחים, מאמרים, שקופיות) למסד הנתונים?')) return;
+    setIsLoadingDemo(true);
+    try {
+        let count = 0;
+        // Add Slides
+        for (const slide of DEMO_SLIDES) {
+             if (!slides.some(s => s.id === slide.id)) {
+                 await addSlide(slide);
+                 count++;
+             }
+        }
+        // Add Content
+        for (const plant of PLANTS) {
+            const item = { ...plant, type: 'plant' as const };
+             if (!content.some(c => c.id === item.id)) {
+                 await addContent(item);
+                 count++;
+             }
+        }
+        for (const article of ARTICLES) {
+             if (!content.some(c => c.id === article.id)) {
+                 await addContent(article);
+                 count++;
+             }
+        }
+        alert(`התהליך הסתיים. ${count} פריטים נוספו בהצלחה!`);
+    } catch (e: any) {
+        alert('שגיאה בטעינת נתונים: ' + e.message);
+    } finally {
+        setIsLoadingDemo(false);
+    }
   };
 
   const handleCreateNewContent = () => {
@@ -76,7 +116,7 @@ const Admin: React.FC = () => {
       setIsEditingSlide(true);
   };
 
-  const handleSaveContent = () => {
+  const handleSaveContent = async () => {
     if (!editingItem) return;
     if (editingItem.type === 'plant' && !editingItem.hebrewName) return alert('נא למלא שם צמח');
     if (editingItem.type !== 'plant' && !editingItem.title) return alert('נא למלא כותרת');
@@ -84,27 +124,35 @@ const Admin: React.FC = () => {
     // Ensure tabs array exists
     const finalItem = { ...editingItem, tabs: editingItem.tabs || [] } as ContentItem;
 
-    if (content.some(c => c.id === finalItem.id)) {
-        updateContent(finalItem);
-    } else {
-        addContent(finalItem);
+    try {
+        if (content.some(c => c.id === finalItem.id)) {
+            await updateContent(finalItem);
+        } else {
+            await addContent(finalItem);
+        }
+        setIsEditingContent(false);
+        setEditingItem(null);
+    } catch (e) {
+        alert('שגיאה בשמירה. וודא שהרשאות ה-SQL הופעלו ב-Supabase.');
     }
-    setIsEditingContent(false);
-    setEditingItem(null);
   };
 
-  const handleSaveSlide = () => {
+  const handleSaveSlide = async () => {
       if (!editingSlide) return;
       if (!editingSlide.title) return alert('חובה להזין כותרת');
       
       const finalSlide = editingSlide as Slide;
-      if (slides.some(s => s.id === finalSlide.id)) {
-          updateSlide(finalSlide);
-      } else {
-          addSlide(finalSlide);
+      try {
+          if (slides.some(s => s.id === finalSlide.id)) {
+              await updateSlide(finalSlide);
+          } else {
+              await addSlide(finalSlide);
+          }
+          setIsEditingSlide(false);
+          setEditingSlide(null);
+      } catch (e) {
+          alert('שגיאה בשמירה. וודא שהרשאות ה-SQL הופעלו.');
       }
-      setIsEditingSlide(false);
-      setEditingSlide(null);
   };
 
   const handleDeleteContent = (id: string) => {
@@ -120,7 +168,20 @@ const Admin: React.FC = () => {
       if (!general.geminiKey) return alert("שגיאה: חסר מפתח Gemini. נא להגדיר בטאב 'חיבורים' ולשמור.");
       setAiLoading(true);
       try {
-          const res = await generateAIContent(promptBase, 'text');
+          // Enhancing the prompt for quality
+          const enhancedPrompt = `
+            You are a senior professional herbalist and editor. 
+            The user needs a high-quality, professional, and detailed text for the field: "${targetField}".
+            
+            Context: ${promptBase}.
+            
+            Instructions:
+            1. Write in Hebrew (unless asked for Latin name).
+            2. Be professional, academic yet accessible.
+            3. Do not use asterisks or markdown formatting if it's a simple text field.
+            4. Provide deep insight, not just a summary.
+          `;
+          const res = await generateAIContent(enhancedPrompt, 'text');
           if (!res) throw new Error("התקבל תוכן ריק");
           
           if (isEditingContent && editingItem) {
@@ -138,17 +199,56 @@ const Admin: React.FC = () => {
   const handleAutoTabs = async () => {
       if (!editingItem || !general.geminiKey) return alert("חסר מפתח AI או פריט לעריכה");
       setAiLoading(true);
-      const name = editingItem.type === 'plant' ? editingItem.hebrewName : editingItem.title;
-      const type = editingItem.type === 'plant' ? 'Medicinal Plant' : 'Article';
-      const prompt = `Create a JSON array of objects for a ${type} named "${name}". 
-      Each object must have "title" (Hebrew) and "content" (Hebrew, HTML friendly but no tags, plain text with newlines).
-      For a plant, suggesting tabs: "שימוש", "בטיחות", "מחקרים", "פולקלור".
-      For article, suggest "מבוא", "גוף המאמר", "סיכום".
-      Format: [{"title": "...", "content": "..."}]`;
+      
+      let prompt = "";
+      
+      // --- PLANT PROMPT ---
+      if (editingItem.type === 'plant') {
+          const plantName = editingItem.hebrewName || "Unnamed Plant";
+          prompt = `
+            You are a world-renowned expert in Clinical Herbal Medicine (Herbalist) with 30 years of experience.
+            Your task is to write a comprehensive, deep, and highly professional profile for the medicinal plant: "${plantName}".
+            
+            You must return a JSON array of tab objects. Each object has "title" and "content".
+            The content must be in Hebrew, formatted as clean text with newlines (HTML friendly, but no heavy tags).
+            
+            Required Tabs (Content must be very detailed, not superficial):
+            1. "פעילות רפואית ומנגנון" (Clinical Actions & Mechanism): Explain exactly how it works on the body, active constituents, and pharmacology.
+            2. "שימושים קליניים" (Clinical Uses): Detailed list of conditions it treats, specifying acute vs chronic.
+            3. "בטיחות והתוויות נגד" (Safety & Contraindications): Pregnancy, lactation, drug interactions (CYP450), and side effects. Be very specific.
+            4. "מינון ואופן שימוש" (Dosage & Preparation): Tincture ratios (1:3, 1:5), decoction vs infusion, specific dosages.
+            5. "פולקלור ומסורת" (Tradition): Historical uses in TCM, Ayurveda, or Western herbalism.
+            
+            Output strictly valid JSON: [{"title": "...", "content": "..."}]
+            Do not cut corners. Think deeply before generating. The quality should be suitable for a medical textbook.
+          `;
+      } 
+      // --- ARTICLE / CASE STUDY PROMPT ---
+      else {
+          const title = editingItem.title || "Untitled Article";
+          const type = editingItem.type === 'case_study' ? 'Case Study' : 'Professional Article';
+          prompt = `
+            You are a senior editor of a prestigious Herbal Medicine Journal.
+            Write a deep, long-form, and professional ${type} titled: "${title}".
+            
+            You must return a JSON array of tab objects. Each object has "title" and "content".
+            The content must be in Hebrew.
+            
+            If it is a Case Study, suggested tabs: "רקע המטופל", "אבחנה (מסורתית/מערבית)", "פרוטוקול הטיפול", "מעקב ותוצאות", "דיון קליני".
+            If it is an Article, suggested tabs: "מבוא", "פיזיולוגיה/פתולוגיה", "הגישה הטיפולית", "צמחים רלוונטיים", "מחקרים ותוצאות", "סיכום".
+            
+            Write extensive content for each tab. Demonstrate deep understanding of pathology and herbal actions.
+            Output strictly valid JSON: [{"title": "...", "content": "..."}]
+          `;
+      }
       
       try {
           const res = await generateAIContent(prompt, 'json');
-          const tabs = JSON.parse(res);
+          
+          // Clean the response if it contains markdown code blocks
+          const jsonString = res.replace(/```json/g, '').replace(/```/g, '').trim();
+          
+          const tabs = JSON.parse(jsonString);
           const mappedTabs = tabs.map((t: any, i: number) => ({
               id: Date.now().toString() + i,
               title: t.title,
@@ -157,7 +257,7 @@ const Admin: React.FC = () => {
           setEditingItem(prev => ({ ...prev, tabs: mappedTabs }));
       } catch (e) {
           console.error(e);
-          alert('שגיאה ביצירת טאבים אוטומטית. וודא שהמפתח תקין.');
+          alert('שגיאה ביצירת טאבים אוטומטית. וודא שהמפתח תקין ונסה שוב.');
       } finally {
           setAiLoading(false);
       }
@@ -480,6 +580,200 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
              </div>
         )}
 
+        {/* CONTENT TAB */}
+        {activeTab === 'content' && (
+             <div className="max-w-5xl">
+                <div className="flex justify-between items-center mb-8">
+                     <h3 className="text-3xl font-bold text-gray-800">ניהול תכנים</h3>
+                     <button onClick={handleCreateNewContent} className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2"><Plus size={20} /> הוסף תוכן</button>
+                </div>
+
+                {!isEditingContent ? (
+                    <>
+                        {content.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-300">
+                                <div className="bg-green-100 p-4 rounded-full mb-4">
+                                    <Database size={48} className="text-green-600" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">לא נמצא תוכן באתר</h3>
+                                <p className="text-gray-500 max-w-md text-center mb-8">
+                                    האתר מחובר למסד הנתונים אך הטבלה ריקה. ניתן לטעון נתוני הדגמה (צמחים ומאמרים) כדי להתחיל לעבוד.
+                                </p>
+                                <button 
+                                    onClick={handleLoadDemoData} 
+                                    disabled={isLoadingDemo}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all"
+                                >
+                                    {isLoadingDemo ? (
+                                        <>טוען נתונים...</>
+                                    ) : (
+                                        <><DownloadCloud size={20}/> טען נתוני הדגמה</>
+                                    )}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-2xl shadow border overflow-hidden">
+                                <table className="w-full text-right">
+                                    <thead className="bg-gray-50 border-b">
+                                        <tr>
+                                            <th className="px-6 py-4">תמונה</th>
+                                            <th className="px-6 py-4">כותרת</th>
+                                            <th className="px-6 py-4">סוג</th>
+                                            <th className="px-6 py-4">פעולות</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {content.map(item => (
+                                            <tr key={item.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4"><img src={item.imageUrl} className="w-10 h-10 rounded object-cover" alt=""/></td>
+                                                <td className="px-6 py-4 font-bold">{item.type === 'plant' ? item.hebrewName : item.title}</td>
+                                                <td className="px-6 py-4"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{item.type}</span></td>
+                                                <td className="px-6 py-4 flex gap-2">
+                                                    <button onClick={() => {setEditingItem(JSON.parse(JSON.stringify(item))); setIsEditingContent(true);}} className="text-blue-600"><Edit2 size={18}/></button>
+                                                    <button onClick={() => handleDeleteContent(item.id)} className="text-red-600"><Trash2 size={18}/></button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border space-y-6">
+                         <div className="flex justify-between">
+                            <h4 className="font-bold text-xl">עריכת תוכן</h4>
+                            <button onClick={() => setIsEditingContent(false)}>ביטול</button>
+                        </div>
+                        
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block font-bold text-sm mb-1">סוג</label>
+                                <select 
+                                    value={editingItem?.type} 
+                                    onChange={e => setEditingItem({...editingItem, type: e.target.value as any})}
+                                    className="w-full border p-2 rounded"
+                                >
+                                    <option value="plant">צמח מרפא</option>
+                                    <option value="article">מאמר</option>
+                                    <option value="case_study">מקרה אירוע</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block font-bold text-sm mb-1">תמונה ראשית</label>
+                                <div className="flex gap-2">
+                                    <input type="text" value={editingItem?.imageUrl} onChange={e => setEditingItem({...editingItem, imageUrl: e.target.value})} className="w-full border p-2 rounded ltr" />
+                                     <button 
+                                        onClick={() => { setImagePickerTarget('content'); setShowImagePicker(true); }}
+                                        className="bg-gray-100 px-3 rounded hover:bg-gray-200"
+                                    >
+                                        <ImageIcon size={18}/>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {editingItem?.type === 'plant' ? (
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div><label className="block font-bold text-sm">שם עברי</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).hebrewName} onChange={e => setEditingItem({...editingItem, hebrewName: e.target.value})} /></div>
+                                <div><label className="block font-bold text-sm">שם לטיני</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).latinName} onChange={e => setEditingItem({...editingItem, latinName: e.target.value})} /></div>
+                                <div className="md:col-span-2">
+                                     <div className="flex justify-between"><label className="block font-bold text-sm">תיאור קצר</label> <button onClick={() => handleAI('description', `Write a short description (Hebrew) for medicinal plant: ${(editingItem as Plant).hebrewName}`)}><Sparkles size={16} className="text-purple-500"/></button></div>
+                                     <textarea className="w-full border p-2 rounded" rows={3} value={(editingItem as Plant).description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
+                                </div>
+                                <div><label className="block font-bold text-sm">קטגוריה</label>
+                                    <select className="w-full border p-2 rounded" value={(editingItem as Plant).category} onChange={e => setEditingItem({...editingItem, category: e.target.value as any})}>
+                                        <option value="general">כללי</option>
+                                        <option value="relaxing">הרגעה</option>
+                                        <option value="immune">חיסון</option>
+                                        <option value="digestive">עיכול</option>
+                                        <option value="skin">עור</option>
+                                    </select>
+                                </div>
+                                <div><label className="block font-bold text-sm">תגיות/יתרונות (פסיקים)</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).benefits?.join(', ')} onChange={e => setEditingItem({...editingItem, benefits: e.target.value.split(',').map(s => s.trim())})} /></div>
+                            </div>
+                        ) : (
+                             <div className="grid gap-6">
+                                <div><label className="block font-bold text-sm">כותרת</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Article).title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} /></div>
+                                <div>
+                                     <div className="flex justify-between"><label className="block font-bold text-sm">תקציר</label> <button onClick={() => handleAI('summary', `Write a summary (Hebrew) for article: ${(editingItem as Article).title}`)}><Sparkles size={16} className="text-purple-500"/></button></div>
+                                     <textarea className="w-full border p-2 rounded" rows={3} value={(editingItem as Article).summary} onChange={e => setEditingItem({...editingItem, summary: e.target.value})} />
+                                </div>
+                                <div><label className="block font-bold text-sm">תגיות (פסיקים)</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Article).tags?.join(', ')} onChange={e => setEditingItem({...editingItem, tags: e.target.value.split(',').map(s => s.trim())})} /></div>
+                                <div><label className="block font-bold text-sm">תאריך</label><input type="date" className="w-full border p-2 rounded" value={(editingItem as Article).date} onChange={e => setEditingItem({...editingItem, date: e.target.value})} /></div>
+                            </div>
+                        )}
+
+                        {/* Dynamic Tabs Section */}
+                        <div className="border-t pt-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h4 className="font-bold text-lg">תוכן נוסף (טאבים)</h4>
+                                <div className="flex gap-2">
+                                     <button onClick={handleAutoTabs} className="bg-purple-600 text-white shadow-lg px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-purple-700 transition-colors" disabled={aiLoading}>
+                                        {aiLoading ? 'חושב וכותב (זה יכול לקחת רגע)...' : <><Sparkles size={16}/> צור תוכן מקצועי מלא (AI)</>}
+                                     </button>
+                                     <button 
+                                        onClick={() => setEditingItem(prev => ({...prev, tabs: [...(prev?.tabs || []), { id: Date.now().toString(), title: 'טאב חדש', content: '' }] }))}
+                                        className="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg text-sm flex items-center gap-1"
+                                     >
+                                        <Plus size={14}/> הוסף טאב
+                                     </button>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                {editingItem?.tabs?.map((tab, idx) => (
+                                    <div key={tab.id} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative group">
+                                        <button 
+                                            onClick={() => setEditingItem(prev => ({...prev, tabs: prev?.tabs?.filter(t => t.id !== tab.id)}))}
+                                            className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                        <div className="mb-2">
+                                            <label className="text-xs font-bold text-gray-500">כותרת הטאב</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full bg-white border p-2 rounded text-sm font-bold"
+                                                value={tab.title}
+                                                onChange={e => {
+                                                    const newTabs = [...(editingItem.tabs || [])];
+                                                    newTabs[idx].title = e.target.value;
+                                                    setEditingItem({...editingItem, tabs: newTabs});
+                                                }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between">
+                                                <label className="text-xs font-bold text-gray-500">תוכן</label>
+                                                <button onClick={() => handleAI('tab_content', `Write extensive professional content for tab "${tab.title}" for subject: ${editingItem.type === 'plant' ? (editingItem as any).hebrewName : (editingItem as any).title}`)}><Sparkles size={14} className="text-purple-400 hover:text-purple-600"/></button>
+                                            </div>
+                                            <textarea 
+                                                rows={5}
+                                                className="w-full bg-white border p-2 rounded text-sm"
+                                                value={tab.content}
+                                                 onChange={e => {
+                                                    const newTabs = [...(editingItem.tabs || [])];
+                                                    newTabs[idx].content = e.target.value;
+                                                    setEditingItem({...editingItem, tabs: newTabs});
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!editingItem?.tabs || editingItem.tabs.length === 0) && <p className="text-gray-400 text-sm text-center">אין טאבים. לחץ על כפתור ה-AI הסגול ליצירת מאמר שלם.</p>}
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t flex gap-4">
+                             <button onClick={handleSaveContent} className="bg-green-600 text-white px-8 py-2 rounded font-bold">שמור פריט</button>
+                             <button onClick={() => setIsEditingContent(false)} className="bg-gray-200 text-gray-800 px-8 py-2 rounded font-bold">ביטול</button>
+                        </div>
+                    </div>
+                )}
+             </div>
+        )}
+
         {/* CONNECTIONS TAB */}
         {activeTab === 'connections' && (
             <div className="max-w-4xl">
@@ -490,16 +784,23 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                     {/* LEFT COLUMN: API & Notes */}
                     <div className="space-y-6">
                          
-                         {/* CRITICAL: API KEYS (Moved up for better access) */}
+                         {/* CRITICAL: API KEYS */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                            <h4 className="font-bold text-xl mb-4 text-purple-700 flex items-center gap-2"><Key size={20}/> מפתחות (API)</h4>
+                            <h4 className="font-bold text-xl mb-4 text-purple-700 flex items-center gap-2"><Key size={20}/> מפתחות (AI ותמונות)</h4>
                             <div className="space-y-4">
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                    <label className="block text-sm font-bold text-gray-800 mb-1">Gemini API Key (עבור AI)</label>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="text-sm font-bold text-gray-800">Gemini API Key</label>
+                                        {general.geminiKey ? <Check size={16} className="text-green-600"/> : <X size={16} className="text-red-500"/>}
+                                    </div>
                                     <input type="password" className="w-full border p-2 rounded bg-white" placeholder="AIzaSy..." value={generalForm.geminiKey} onChange={e => setGeneralForm({...generalForm, geminiKey: e.target.value})} />
+                                    {!general.geminiKey && <p className="text-xs text-red-500 mt-1">חסר! ה-AI לא יעבוד.</p>}
                                 </div>
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                    <label className="block text-sm font-bold text-gray-800 mb-1">Unsplash Key (עבור תמונות)</label>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="text-sm font-bold text-gray-800">Unsplash Key</label>
+                                        {general.unsplashKey ? <Check size={16} className="text-green-600"/> : <X size={16} className="text-red-500"/>}
+                                    </div>
                                     <input type="password" className="w-full border p-2 rounded bg-white" value={generalForm.unsplashKey} onChange={e => setGeneralForm({...generalForm, unsplashKey: e.target.value})} />
                                 </div>
                                 <button onClick={handleGeneralSave} className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-purple-700">שמור מפתחות</button>
@@ -530,53 +831,44 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                     {/* RIGHT COLUMN: Database & Instructions */}
                     <div className="space-y-6">
                          
-                         {/* Supabase Guide */}
+                         {/* Supabase Guide - SIMPLIFIED UI */}
                          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                            <h4 className="font-bold text-xl mb-4 flex items-center gap-2 text-blue-800"><Database size={20}/> הגדרות חיבור (Supabase & Vercel)</h4>
+                            <h4 className="font-bold text-xl mb-4 flex items-center gap-2 text-blue-800"><Database size={20}/> מדריך חיבור (Supabase)</h4>
                             
                             <div className="space-y-4">
 
-                                {/* Deploy/Env Vars Instructions - UPDATED & DETAILED */}
+                                {/* Step-by-Step Connection Guide */}
                                 <div className="border border-blue-200 bg-blue-50 rounded-xl overflow-hidden">
-                                    <button 
-                                        onClick={() => setOpenInstruction(openInstruction === 'deploy' ? null : 'deploy')}
-                                        className="w-full p-4 flex justify-between items-center hover:bg-blue-100 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-2 font-bold text-blue-800">
-                                            <Globe size={18}/> איך מחברים את האתר ל-Supabase? (חובה!)
-                                        </div>
-                                        {openInstruction === 'deploy' ? <div className="rotate-180">▲</div> : <div>▼</div>}
-                                    </button>
-                                    
-                                    {/* Always open by default if env vars missing, or user toggles */}
-                                    {(openInstruction === 'deploy' || !general.geminiKey) && (
-                                        <div className="p-4 bg-white text-sm space-y-4 border-t border-blue-100">
-                                            <p className="font-bold text-gray-800">האתר לא מתעדכן במכשירים אחרים? בצע את זה:</p>
-                                            
-                                            <div className="space-y-2">
-                                                <strong className="block text-green-700">שלב 1: העתק מ-Supabase</strong>
-                                                <ul className="list-disc list-inside text-gray-600 pl-2">
-                                                    <li>לך להגדרות הפרויקט (Settings) &rarr; <strong>API</strong>.</li>
-                                                    <li>העתק את <code>Project URL</code>.</li>
-                                                    <li>העתק את <code>anon public</code> key.</li>
-                                                </ul>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <strong className="block text-black">שלב 2: הדבק ב-Vercel</strong>
-                                                <ul className="list-disc list-inside text-gray-600 pl-2">
-                                                    <li>לך להגדרות הפרויקט ב-Vercel &rarr; <strong>Environment Variables</strong>.</li>
-                                                    <li>הוסף משתנה בשם <code className="bg-gray-100 px-1 font-bold">VITE_SUPABASE_URL</code> עם הכתובת שהעתקת.</li>
-                                                    <li>הוסף משתנה בשם <code className="bg-gray-100 px-1 font-bold">VITE_SUPABASE_ANON_KEY</code> עם המפתח שהעתקת.</li>
-                                                    <li>לחץ <strong>Save</strong>.</li>
-                                                </ul>
-                                            </div>
-
-                                            <div className="bg-yellow-50 p-2 rounded border border-yellow-200 text-xs">
-                                                <strong>חשוב:</strong> אחרי השמירה, לך ללשונית <strong>Deployments</strong> ב-Vercel, לחץ על ה-3 נקודות ועשה <strong>Redeploy</strong>.
+                                    <div className="p-4 bg-white text-sm space-y-4 border-t border-blue-100">
+                                        <p className="font-bold text-lg text-gray-800 mb-4">איך לחבר את האתר? (מדריך מקוצר)</p>
+                                        
+                                        <div className="flex items-start gap-3">
+                                            <div className="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
+                                            <div>
+                                                <strong>באתר Supabase:</strong> כנס ל-Settings &rarr; API.
+                                                <br/><span className="text-gray-500">העתק את כתובת ה-URL ואת מפתח ה-anon public.</span>
                                             </div>
                                         </div>
-                                    )}
+
+                                        <div className="flex items-start gap-3">
+                                            <div className="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
+                                            <div>
+                                                <strong>באתר Vercel:</strong> כנס ל-Settings &rarr; Environment Variables.
+                                                <br/><span className="text-gray-500">הוסף שני משתנים:</span>
+                                                <ul className="list-disc list-inside mt-1 font-mono text-xs bg-gray-100 p-2 rounded">
+                                                    <li>VITE_SUPABASE_URL</li>
+                                                    <li>VITE_SUPABASE_ANON_KEY</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-3">
+                                            <div className="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+                                            <div>
+                                                <strong>סיום:</strong> ב-Vercel, לך ל-Deployments, לחץ על 3 הנקודות ועשה Redeploy.
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 {/* 1. SQL Instructions */}
@@ -586,14 +878,14 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                                         className="w-full bg-gray-50 p-4 flex justify-between items-center hover:bg-gray-100 transition-colors"
                                     >
                                         <div className="flex items-center gap-2 font-bold text-gray-700">
-                                            <Server size={18}/> קוד SQL (להרצת הרשאות)
+                                            <Server size={18}/> קוד SQL (הפעלה חד פעמית)
                                         </div>
                                         {openInstruction === 'supabase_sql' ? <div className="rotate-180">▲</div> : <div>▼</div>}
                                     </button>
                                     {openInstruction === 'supabase_sql' && (
                                         <div className="p-4 bg-white text-sm space-y-3">
-                                            <p className="text-red-600 font-bold bg-red-50 p-2 rounded border border-red-200">
-                                                אם התמונות או ה-AI לא עובדים, הרץ את הקוד הזה שוב ב-Supabase SQL Editor.
+                                            <p className="text-red-600 font-bold bg-red-50 p-2 rounded border border-red-200 flex gap-2 items-center">
+                                                <AlertTriangle size={16}/> חובה להריץ כדי שהשמירה תעבוד!
                                             </p>
                                             <div className="relative bg-gray-900 rounded-lg p-3 group mt-2">
                                                 <button onClick={copyToClipboard} className="absolute top-2 left-2 bg-white/20 text-white px-2 py-1 rounded text-xs hover:bg-white/40">{copied ? 'הועתק!' : 'העתק'}</button>
@@ -604,33 +896,6 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                                         </div>
                                     )}
                                 </div>
-
-                                {/* 2. Storage Instructions */}
-                                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                                    <button 
-                                        onClick={() => setOpenInstruction(openInstruction === 'supabase_storage' ? null : 'supabase_storage')}
-                                        className="w-full bg-gray-50 p-4 flex justify-between items-center hover:bg-gray-100 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-2 font-bold text-gray-700">
-                                            <HardDrive size={18}/> הגדרת אחסון תמונות (ידני)
-                                        </div>
-                                        {openInstruction === 'supabase_storage' ? <div className="rotate-180">▲</div> : <div>▼</div>}
-                                    </button>
-                                    {openInstruction === 'supabase_storage' && (
-                                        <div className="p-4 bg-white text-sm space-y-3">
-                                            <p>אם הקוד SQL לא יצר את ה-Bucket אוטומטית:</p>
-                                            <ol className="list-decimal list-inside space-y-2 text-gray-600">
-                                                <li>ב-Supabase לחץ על <strong>Storage</strong>.</li>
-                                                <li>צור <strong>New Bucket</strong>.</li>
-                                                <li>שם: <code className="bg-gray-100 px-1 rounded text-red-600 font-bold">public-images</code></li>
-                                                <li>
-                                                    <strong>חשוב מאוד:</strong> הפעל את המתג <span className="font-bold">Public bucket</span>.
-                                                </li>
-                                            </ol>
-                                        </div>
-                                    )}
-                                </div>
-
                             </div>
                          </div>
                     </div>

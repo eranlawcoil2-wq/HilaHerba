@@ -290,10 +290,21 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
         const ai = new GoogleGenAI({ apiKey: general.geminiKey });
+        
+        // Configuration for "Deep Thinking"
+        const config: any = {
+             // Giving the model a budget to think for better quality
+             thinkingConfig: { thinkingBudget: 2048 }
+        };
+
+        if (type === 'json') {
+            config.responseMimeType = 'application/json';
+        }
+
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
-            config: type === 'json' ? { responseMimeType: 'application/json' } : {}
+            config: config
         });
         
         // Safety check for empty response
