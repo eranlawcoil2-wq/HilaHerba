@@ -2,8 +2,7 @@ import { NavItem } from './types';
 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'בית', path: '/' },
-  { label: 'אינדקס צמחים', path: '/plants' },
-  { label: 'מרכז ידע', path: '/knowledge' },
+  { label: 'מרכז הידע', path: '/knowledge' }, // Unified page
   { label: 'אודות', path: '/about' },
   { label: 'צור קשר', path: '/contact' },
 ];
@@ -23,4 +22,11 @@ export const CATEGORY_LABELS: Record<string, string> = {
   immune: 'חיסון',
   skin: 'עור',
   general: 'כללי'
+};
+
+export const TYPE_LABELS: Record<string, string> = {
+  all: 'כל התכנים',
+  plant: 'צמחי מרפא',
+  article: 'מאמרים',
+  case_study: 'מקרי בוחן'
 };

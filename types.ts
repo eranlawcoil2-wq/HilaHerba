@@ -21,6 +21,10 @@ export interface Article {
   tags: string[];
 }
 
+export type ContentItem = 
+  | (Plant & { type: 'plant' }) 
+  | Article;
+
 export interface NavItem {
   label: string;
   path: string;
