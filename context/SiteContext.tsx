@@ -291,7 +291,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
         const ai = new GoogleGenAI({ apiKey: general.geminiKey });
         
-        // Removed thinkingConfig to fix API permission errors
         const config: any = {};
 
         if (type === 'json') {
@@ -305,7 +304,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         if (!response.text) {
-             throw new Error("המודל החזיר תשובה ריקה. ייתכן שהנושא חסום או שהמפתח לא תקין.");
+             throw new Error("המודל החזיר תשובה ריקה.");
         }
         
         return response.text;

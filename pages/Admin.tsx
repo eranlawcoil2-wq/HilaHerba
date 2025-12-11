@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, HelpCircle, StickyNote, Server, HardDrive, Globe, MapPin, Key, AlertTriangle, DownloadCloud } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud } from 'lucide-react';
 import { ContentItem, Slide, Plant, Article } from '../types';
 import { PLANTS, ARTICLES, SLIDES as DEMO_SLIDES } from '../services/data';
 
@@ -197,7 +197,7 @@ const Admin: React.FC = () => {
   };
 
   const handleAutoTabs = async () => {
-      if (!editingItem || !general.geminiKey) return alert("חסר מפתח AI או פריט לעריכה");
+      if (!editingItem || !general.geminiKey) return alert("חסר מפתח AI או פריט לעריכה. וודא שהמפתח נשמר בטאב 'חיבורים'.");
       setAiLoading(true);
       
       let prompt = "";
@@ -220,7 +220,7 @@ const Admin: React.FC = () => {
             5. "פולקלור ומסורת" (Tradition): Historical uses in TCM, Ayurveda, or Western herbalism.
             
             Output strictly valid JSON: [{"title": "...", "content": "..."}]
-            Do not cut corners. Think deeply before generating. The quality should be suitable for a medical textbook.
+            Do not include markdown ticks. Just the JSON array.
           `;
       } 
       // --- ARTICLE / CASE STUDY PROMPT ---
@@ -245,19 +245,31 @@ const Admin: React.FC = () => {
       try {
           const res = await generateAIContent(prompt, 'json');
           
-          // Clean the response if it contains markdown code blocks
-          const jsonString = res.replace(/```json/g, '').replace(/```/g, '').trim();
+          // Robust JSON extraction
+          let jsonString = res.replace(/```json/g, '').replace(/```/g, '').trim();
+          
+          // Find the array brackets if there is extra text
+          const firstBracket = jsonString.indexOf('[');
+          const lastBracket = jsonString.lastIndexOf(']');
+          
+          if (firstBracket !== -1 && lastBracket !== -1) {
+              jsonString = jsonString.substring(firstBracket, lastBracket + 1);
+          }
           
           const tabs = JSON.parse(jsonString);
+          
+          // Generate IDs for new tabs
           const mappedTabs = tabs.map((t: any, i: number) => ({
               id: Date.now().toString() + i,
               title: t.title,
               content: t.content
           }));
+          
           setEditingItem(prev => ({ ...prev, tabs: mappedTabs }));
-      } catch (e) {
-          console.error(e);
-          alert('שגיאה ביצירת טאבים אוטומטית. וודא שהמפתח תקין ונסה שוב.');
+      } catch (e: any) {
+          console.error("AI Auto Tabs Error:", e);
+          const errorMsg = e.message || e.toString();
+          alert(`שגיאה ביצירת טאבים אוטומטית:\n${errorMsg}\n\nנסה שוב או בדוק את המפתח.`);
       } finally {
           setAiLoading(false);
       }
