@@ -154,12 +154,9 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (contentData && contentData.length > 0) {
         setContent(contentData.map(mapDbToContent));
       } else {
-        // Fallback only if strictly necessary or empty, but prefer empty if DB is connected
         if (contentData && contentData.length === 0) {
-             // DB is empty, don't show fallback data, show empty
              setContent([]);
         } else {
-             // Error or first load fallback
              setContent([...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES]);
         }
       }
@@ -182,7 +179,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error("Error fetching data:", error);
-      // Fallback on error
       setContent([...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES]);
       setSlides(SLIDES);
     } finally {
@@ -290,7 +286,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // --- AI & Images ---
 
   const generateAIContent = async (prompt: string, type: 'text' | 'json'): Promise<string> => {
-    if (!general.geminiKey) return "אנא הגדר מפתח API של Gemini בטאב 'חיבורים'";
+    if (!general.geminiKey) throw new Error("חסר מפתח Gemini API בהגדרות");
     
     try {
         const ai = new GoogleGenAI({ apiKey: general.geminiKey });
@@ -299,10 +295,19 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
             contents: prompt,
             config: type === 'json' ? { responseMimeType: 'application/json' } : {}
         });
-        return response.text || '';
+        
+        // Safety check for empty response
+        if (!response.text) {
+             throw new Error("המודל החזיר תשובה ריקה. ייתכן שהנושא חסום או שהמפתח לא תקין.");
+        }
+        
+        return response.text;
     } catch (e: any) {
         console.error("AI Error:", e);
-        return "שגיאה ביצירת תוכן: " + e.message;
+        // Better error message extraction
+        let msg = e.message || "שגיאה לא ידועה";
+        if (msg.includes('403') || msg.includes('API key')) msg = "מפתח API לא תקין או חסר הרשאות.";
+        throw new Error(msg);
     }
   };
 
@@ -320,17 +325,27 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const uploadImage = async (file: File): Promise<string | null> => {
       try {
-          // Requires a 'public-images' bucket in Supabase Storage
           const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+          
+          // 1. Upload
           const { data, error } = await supabase.storage.from('public-images').upload(fileName, file);
           
-          if (error) throw error;
+          if (error) {
+              console.error("Supabase Storage Error:", error);
+              if (error.message.includes("row-level security")) {
+                  alert("שגיאת הרשאות: עליך להריץ את קוד ה-SQL העדכני ב-Admin כדי לאפשר העלאת תמונות.");
+              } else {
+                  alert("שגיאה בהעלאה: " + error.message);
+              }
+              return null;
+          }
           
+          // 2. Get URL
           const { data: { publicUrl } } = supabase.storage.from('public-images').getPublicUrl(fileName);
           return publicUrl;
-      } catch (e) {
+      } catch (e: any) {
           console.error("Upload Error:", e);
-          alert("שגיאה בהעלאת תמונה. וודא שקיים Bucket בשם 'public-images' והוגדרו הרשאות.");
+          alert("שגיאה בהעלאה: " + e.message);
           return null;
       }
   };

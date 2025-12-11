@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, HelpCircle, StickyNote, Server, HardDrive, Globe } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, HelpCircle, StickyNote, Server, HardDrive, Globe, MapPin, Key } from 'lucide-react';
 import { ContentItem, Slide } from '../types';
 
 type Tab = 'general' | 'content' | 'slides' | 'connections';
@@ -16,6 +16,12 @@ const Admin: React.FC = () => {
 
   // --- States ---
   const [generalForm, setGeneralForm] = useState(general);
+  
+  // Sync form with context data when it loads from DB
+  useEffect(() => {
+      setGeneralForm(general);
+  }, [general]);
+
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<ContentItem> | null>(null);
   
@@ -111,17 +117,19 @@ const Admin: React.FC = () => {
 
   // --- AI Logic ---
   const handleAI = async (targetField: string, promptBase: string) => {
-      if (!general.geminiKey) return alert("נא להגדיר מפתח Gemini בטאב חיבורים");
+      if (!general.geminiKey) return alert("שגיאה: חסר מפתח Gemini. נא להגדיר בטאב 'חיבורים' ולשמור.");
       setAiLoading(true);
       try {
           const res = await generateAIContent(promptBase, 'text');
+          if (!res) throw new Error("התקבל תוכן ריק");
+          
           if (isEditingContent && editingItem) {
              setEditingItem(prev => ({ ...prev, [targetField]: res }));
           } else if (isEditingSlide && editingSlide) {
              setEditingSlide(prev => ({ ...prev, [targetField]: res }));
           }
-      } catch (e) {
-          alert('שגיאה ב-AI');
+      } catch (e: any) {
+          alert('שגיאה ביצירת תוכן: ' + (e.message || 'נסה שוב'));
       } finally {
           setAiLoading(false);
       }
@@ -149,7 +157,7 @@ const Admin: React.FC = () => {
           setEditingItem(prev => ({ ...prev, tabs: mappedTabs }));
       } catch (e) {
           console.error(e);
-          alert('שגיאה ביצירת טאבים אוטומטית');
+          alert('שגיאה ביצירת טאבים אוטומטית. וודא שהמפתח תקין.');
       } finally {
           setAiLoading(false);
       }
@@ -157,6 +165,7 @@ const Admin: React.FC = () => {
 
   // --- Image Picker Logic ---
   const handleImageSearch = async () => {
+      if (!general.unsplashKey) return alert("חסר מפתח Unsplash בהגדרות");
       const results = await searchImages(searchQuery);
       setSearchResults(results);
   };
@@ -173,7 +182,11 @@ const Admin: React.FC = () => {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
           const url = await uploadImage(e.target.files[0]);
-          if (url) selectImage(url);
+          if (url) {
+              selectImage(url);
+          } else {
+              // Error handled in uploadImage
+          }
       }
   };
 
@@ -220,7 +233,7 @@ create table if not exists general_settings (
   admin_notes text
 );
 
--- 2. הפעלת Realtime (בטוח)
+-- 2. הפעלת Realtime
 do $$
 begin
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'content') then
@@ -234,28 +247,56 @@ begin
   end if;
 end $$;
 
--- 3. הרשאות (חשוב מאוד!)
+-- 3. הרשאות גישה (Row Level Security)
 alter table content enable row level security;
 alter table hero_slides enable row level security;
 alter table general_settings enable row level security;
 
--- ניקוי מדיניות ישנה למניעת כפילויות
+-- מחיקת הרשאות ישנות
 drop policy if exists "Public Read Content" on content;
 drop policy if exists "Public Write Content" on content;
+drop policy if exists "Public Update Content" on content;
+drop policy if exists "Public Delete Content" on content;
+
 drop policy if exists "Public Read Slides" on hero_slides;
 drop policy if exists "Public Write Slides" on hero_slides;
+drop policy if exists "Public Update Slides" on hero_slides;
+drop policy if exists "Public Delete Slides" on hero_slides;
+
 drop policy if exists "Public Read Settings" on general_settings;
 drop policy if exists "Public Write Settings" on general_settings;
+drop policy if exists "Public Update Settings" on general_settings;
 
--- יצירת הרשאות פתוחות (קריאה וכתיבה לכולם)
+-- יצירת הרשאות חדשות
 create policy "Public Read Content" on content for select using (true);
-create policy "Public Write Content" on content for all using (true);
+create policy "Public Write Content" on content for insert with check (true);
+create policy "Public Update Content" on content for update using (true);
+create policy "Public Delete Content" on content for delete using (true);
 
 create policy "Public Read Slides" on hero_slides for select using (true);
-create policy "Public Write Slides" on hero_slides for all using (true);
+create policy "Public Write Slides" on hero_slides for insert with check (true);
+create policy "Public Update Slides" on hero_slides for update using (true);
+create policy "Public Delete Slides" on hero_slides for delete using (true);
 
 create policy "Public Read Settings" on general_settings for select using (true);
-create policy "Public Write Settings" on general_settings for all using (true);`;
+create policy "Public Write Settings" on general_settings for insert with check (true);
+create policy "Public Update Settings" on general_settings for update using (true);
+
+-- 4. הרשאות לתמונות (Storage Policies) - קריטי להעלאת תמונות!
+-- הערה: יצירת ה-Bucket עצמו חייבת להיעשות דרך הממשק אם היא נכשלת כאן, אך הפקודות הבאות יאפשרו העלאה.
+do $$
+begin
+    insert into storage.buckets (id, name, public) 
+    values ('public-images', 'public-images', true)
+    on conflict (id) do nothing;
+end $$;
+
+drop policy if exists "Public Images Read" on storage.objects;
+drop policy if exists "Public Images Upload" on storage.objects;
+
+create policy "Public Images Read" on storage.objects for select using ( bucket_id = 'public-images' );
+create policy "Public Images Upload" on storage.objects for insert with check ( bucket_id = 'public-images' );
+`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(sqlCode);
@@ -319,6 +360,20 @@ create policy "Public Write Settings" on general_settings for all using (true);`
                             <input type="text" value={generalForm.email} onChange={e => setGeneralForm({...generalForm, email: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
                         </div>
                     </div>
+                    {/* NEW ADDRESS FIELD */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">כתובת הקליניקה</label>
+                        <div className="relative">
+                            <MapPin size={18} className="absolute top-3 left-3 text-gray-400" />
+                            <input 
+                                type="text" 
+                                value={generalForm.address} 
+                                onChange={e => setGeneralForm({...generalForm, address: e.target.value})} 
+                                className="w-full pl-10 pr-4 py-2 border rounded-lg" 
+                            />
+                        </div>
+                    </div>
+
                     <div>
                          <label className="block text-sm font-bold text-gray-700 mb-2">אודות (קצר)</label>
                          <textarea value={generalForm.aboutShort} onChange={e => setGeneralForm({...generalForm, aboutShort: e.target.value})} className="w-full px-4 py-2 border rounded-lg" rows={2} />
@@ -603,53 +658,41 @@ create policy "Public Write Settings" on general_settings for all using (true);`
                     
                     {/* LEFT COLUMN: API & Notes */}
                     <div className="space-y-6">
-                         {/* Admin Notes */}
-                        <div className="bg-yellow-50 p-6 rounded-2xl shadow-sm border border-yellow-200">
-                             <h4 className="font-bold text-xl mb-3 flex items-center gap-2 text-yellow-800"><StickyNote size={20}/> תזכורות והערות אישיות</h4>
-                             <p className="text-sm text-yellow-700 mb-3">אזור אישי לרישום משימות, רעיונות למאמרים ושינויים שצריך לבצע.</p>
-                             <textarea 
-                                className="w-full border border-yellow-300 p-4 rounded-xl bg-white text-gray-800 min-h-[250px] shadow-inner focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all text-base"
-                                placeholder="למשל: לכתוב מאמר על סרפד בשבוע הבא..."
-                                value={generalForm.adminNotes}
-                                onChange={e => setGeneralForm({...generalForm, adminNotes: e.target.value})}
-                             />
-                             <div className="mt-4 flex justify-end">
-                                <button onClick={handleGeneralSave} className="bg-yellow-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow hover:bg-yellow-700 transition-colors">שמור הערות</button>
-                             </div>
-                        </div>
-
-                         {/* API KEYS */}
+                         
+                         {/* CRITICAL: API KEYS (Moved up for better access) */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                            <h4 className="font-bold text-xl mb-4 text-purple-700 flex items-center gap-2"><Sparkles size={20}/> מפתחות (API)</h4>
+                            <h4 className="font-bold text-xl mb-4 text-purple-700 flex items-center gap-2"><Key size={20}/> מפתחות (API)</h4>
                             <div className="space-y-4">
-                                {/* Gemini Key */}
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <label className="block text-sm font-bold text-gray-800">Gemini API Key</label>
-                                        <button onClick={() => setOpenInstruction(openInstruction === 'gemini' ? null : 'gemini')} className="text-xs text-blue-600 flex items-center gap-1 hover:underline"><HelpCircle size={14} /> עזרה</button>
-                                    </div>
-                                    {openInstruction === 'gemini' && (
-                                        <div className="text-xs bg-blue-50 p-2 rounded mb-2 border border-blue-100">
-                                            1. לך ל-Google AI Studio.<br/>2. צור מפתח (Create API Key).<br/>3. העתק והדבק כאן.
-                                        </div>
-                                    )}
+                                    <label className="block text-sm font-bold text-gray-800 mb-1">Gemini API Key (עבור AI)</label>
                                     <input type="password" className="w-full border p-2 rounded bg-white" placeholder="AIzaSy..." value={generalForm.geminiKey} onChange={e => setGeneralForm({...generalForm, geminiKey: e.target.value})} />
                                 </div>
-                                {/* Unsplash Key */}
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <label className="block text-sm font-bold text-gray-800">Unsplash Key</label>
-                                        <button onClick={() => setOpenInstruction(openInstruction === 'unsplash' ? null : 'unsplash')} className="text-xs text-blue-600 flex items-center gap-1 hover:underline"><HelpCircle size={14} /> עזרה</button>
-                                    </div>
-                                     {openInstruction === 'unsplash' && (
-                                        <div className="text-xs bg-blue-50 p-2 rounded mb-2 border border-blue-100">
-                                            1. הרשם כמפתח ב-Unsplash.<br/>2. צור אפליקציה חדשה.<br/>3. העתק את ה-Access Key.
-                                        </div>
-                                    )}
+                                    <label className="block text-sm font-bold text-gray-800 mb-1">Unsplash Key (עבור תמונות)</label>
                                     <input type="password" className="w-full border p-2 rounded bg-white" value={generalForm.unsplashKey} onChange={e => setGeneralForm({...generalForm, unsplashKey: e.target.value})} />
                                 </div>
                                 <button onClick={handleGeneralSave} className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-purple-700">שמור מפתחות</button>
                             </div>
+                        </div>
+
+                         {/* Admin Notes - PRESERVED & SECURED */}
+                        <div className="bg-yellow-50 p-6 rounded-2xl shadow-sm border border-yellow-200">
+                             <div className="flex justify-between items-start mb-3">
+                                 <h4 className="font-bold text-xl flex items-center gap-2 text-yellow-800"><StickyNote size={20}/> תזכורות ופרטי התחברות</h4>
+                                 <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full font-bold">אישי בלבד</span>
+                             </div>
+                             <p className="text-sm text-yellow-700 mb-3">המידע כאן נשמר בבסיס הנתונים ומוצג רק לך בדף הניהול.</p>
+                             <textarea 
+                                className="w-full border border-yellow-300 p-4 rounded-xl bg-white text-gray-800 min-h-[250px] shadow-inner focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all text-base font-mono"
+                                placeholder="כתוב כאן הערות, סיסמאות או משימות..."
+                                value={generalForm.adminNotes}
+                                onChange={e => setGeneralForm({...generalForm, adminNotes: e.target.value})}
+                             />
+                             <div className="mt-4 flex justify-end">
+                                <button onClick={handleGeneralSave} className="bg-yellow-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow hover:bg-yellow-700 transition-colors flex items-center gap-2">
+                                    <Save size={16} /> שמור הערות
+                                </button>
+                             </div>
                         </div>
                     </div>
 
@@ -658,9 +701,52 @@ create policy "Public Write Settings" on general_settings for all using (true);`
                          
                          {/* Supabase Guide */}
                          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                            <h4 className="font-bold text-xl mb-4 flex items-center gap-2 text-blue-800"><Database size={20}/> הגדרת Supabase (מסד נתונים)</h4>
+                            <h4 className="font-bold text-xl mb-4 flex items-center gap-2 text-blue-800"><Database size={20}/> הגדרות חיבור (Supabase & Vercel)</h4>
                             
                             <div className="space-y-4">
+
+                                {/* Deploy/Env Vars Instructions - UPDATED & DETAILED */}
+                                <div className="border border-blue-200 bg-blue-50 rounded-xl overflow-hidden">
+                                    <button 
+                                        onClick={() => setOpenInstruction(openInstruction === 'deploy' ? null : 'deploy')}
+                                        className="w-full p-4 flex justify-between items-center hover:bg-blue-100 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2 font-bold text-blue-800">
+                                            <Globe size={18}/> איך מחברים את האתר ל-Supabase? (חובה!)
+                                        </div>
+                                        {openInstruction === 'deploy' ? <div className="rotate-180">▲</div> : <div>▼</div>}
+                                    </button>
+                                    
+                                    {/* Always open by default if env vars missing, or user toggles */}
+                                    {(openInstruction === 'deploy' || !general.geminiKey) && (
+                                        <div className="p-4 bg-white text-sm space-y-4 border-t border-blue-100">
+                                            <p className="font-bold text-gray-800">האתר לא מתעדכן במכשירים אחרים? בצע את זה:</p>
+                                            
+                                            <div className="space-y-2">
+                                                <strong className="block text-green-700">שלב 1: העתק מ-Supabase</strong>
+                                                <ul className="list-disc list-inside text-gray-600 pl-2">
+                                                    <li>לך להגדרות הפרויקט (Settings) -> <strong>API</strong>.</li>
+                                                    <li>העתק את <code>Project URL</code>.</li>
+                                                    <li>העתק את <code>anon public</code> key.</li>
+                                                </ul>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <strong className="block text-black">שלב 2: הדבק ב-Vercel</strong>
+                                                <ul className="list-disc list-inside text-gray-600 pl-2">
+                                                    <li>לך להגדרות הפרויקט ב-Vercel -> <strong>Environment Variables</strong>.</li>
+                                                    <li>הוסף משתנה בשם <code className="bg-gray-100 px-1 font-bold">VITE_SUPABASE_URL</code> עם הכתובת שהעתקת.</li>
+                                                    <li>הוסף משתנה בשם <code className="bg-gray-100 px-1 font-bold">VITE_SUPABASE_ANON_KEY</code> עם המפתח שהעתקת.</li>
+                                                    <li>לחץ <strong>Save</strong>.</li>
+                                                </ul>
+                                            </div>
+
+                                            <div className="bg-yellow-50 p-2 rounded border border-yellow-200 text-xs">
+                                                <strong>חשוב:</strong> אחרי השמירה, לך ללשונית <strong>Deployments</strong> ב-Vercel, לחץ על ה-3 נקודות ועשה <strong>Redeploy</strong>.
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                                 
                                 {/* 1. SQL Instructions */}
                                 <div className="border border-gray-200 rounded-xl overflow-hidden">
@@ -669,21 +755,15 @@ create policy "Public Write Settings" on general_settings for all using (true);`
                                         className="w-full bg-gray-50 p-4 flex justify-between items-center hover:bg-gray-100 transition-colors"
                                     >
                                         <div className="flex items-center gap-2 font-bold text-gray-700">
-                                            <Server size={18}/> 1. יצירת הטבלאות (SQL)
+                                            <Server size={18}/> קוד SQL (להרצת הרשאות)
                                         </div>
                                         {openInstruction === 'supabase_sql' ? <div className="rotate-180">▲</div> : <div>▼</div>}
                                     </button>
                                     {openInstruction === 'supabase_sql' && (
                                         <div className="p-4 bg-white text-sm space-y-3">
                                             <p className="text-red-600 font-bold bg-red-50 p-2 rounded border border-red-200">
-                                                חשוב מאוד! הקוד עודכן. עליך להריץ אותו שוב ב-Supabase כדי לפתוח את הגישה לכל המכשירים.
+                                                אם התמונות או ה-AI לא עובדים, הרץ את הקוד הזה שוב ב-Supabase SQL Editor.
                                             </p>
-                                            <ol className="list-decimal list-inside space-y-1 text-gray-600">
-                                                <li>הכנס לפרויקט שלך ב-Supabase.</li>
-                                                <li>לחץ על <strong>SQL Editor</strong> בתפריט.</li>
-                                                <li>לחץ על <strong>New Query</strong> והדבק את הקוד.</li>
-                                                <li>לחץ על <strong>RUN</strong>.</li>
-                                            </ol>
                                             <div className="relative bg-gray-900 rounded-lg p-3 group mt-2">
                                                 <button onClick={copyToClipboard} className="absolute top-2 left-2 bg-white/20 text-white px-2 py-1 rounded text-xs hover:bg-white/40">{copied ? 'הועתק!' : 'העתק'}</button>
                                                 <pre className="text-blue-300 text-xs overflow-x-auto font-mono dir-ltr text-left h-32 custom-scrollbar">
@@ -701,46 +781,21 @@ create policy "Public Write Settings" on general_settings for all using (true);`
                                         className="w-full bg-gray-50 p-4 flex justify-between items-center hover:bg-gray-100 transition-colors"
                                     >
                                         <div className="flex items-center gap-2 font-bold text-gray-700">
-                                            <HardDrive size={18}/> 2. הגדרת אחסון תמונות (Storage)
+                                            <HardDrive size={18}/> הגדרת אחסון תמונות (ידני)
                                         </div>
                                         {openInstruction === 'supabase_storage' ? <div className="rotate-180">▲</div> : <div>▼</div>}
                                     </button>
                                     {openInstruction === 'supabase_storage' && (
                                         <div className="p-4 bg-white text-sm space-y-3">
-                                            <p>כדי שתוכל להעלות תמונות מהמחשב, צריך ליצור "דלי" (Bucket) ציבורי:</p>
+                                            <p>אם הקוד SQL לא יצר את ה-Bucket אוטומטית:</p>
                                             <ol className="list-decimal list-inside space-y-2 text-gray-600">
-                                                <li>בתפריט בצד שמאל ב-Supabase, לחץ על <strong>Storage</strong>.</li>
-                                                <li>לחץ על כפתור <strong>New Bucket</strong>.</li>
-                                                <li>בשדה השם כתוב בדיוק: <code className="bg-gray-100 px-1 rounded text-red-600 font-bold">public-images</code></li>
+                                                <li>ב-Supabase לחץ על <strong>Storage</strong>.</li>
+                                                <li>צור <strong>New Bucket</strong>.</li>
+                                                <li>שם: <code className="bg-gray-100 px-1 rounded text-red-600 font-bold">public-images</code></li>
                                                 <li>
-                                                    <strong>חשוב מאוד:</strong> הפעל את המתג <span className="font-bold">Public bucket</span> (כך שיהיה ירוק/פעיל).
+                                                    <strong>חשוב מאוד:</strong> הפעל את המתג <span className="font-bold">Public bucket</span>.
                                                 </li>
-                                                <li>לחץ על <strong>Save</strong>.</li>
                                             </ol>
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                {/* 3. Deploy/Env Vars Instructions */}
-                                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                                    <button 
-                                        onClick={() => setOpenInstruction(openInstruction === 'deploy' ? null : 'deploy')}
-                                        className="w-full bg-gray-50 p-4 flex justify-between items-center hover:bg-gray-100 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-2 font-bold text-gray-700">
-                                            <Globe size={18}/> 3. הגדרות לשרת (Vercel/Netlify)
-                                        </div>
-                                        {openInstruction === 'deploy' ? <div className="rotate-180">▲</div> : <div>▼</div>}
-                                    </button>
-                                    {openInstruction === 'deploy' && (
-                                        <div className="p-4 bg-white text-sm space-y-3">
-                                            <p className="font-bold text-gray-800">האתר לא מתעדכן במכשירים אחרים?</p>
-                                            <p>אם העלית את האתר לאוויר (למשל דרך Vercel או Netlify), חובה להגדיר שם את המשתנים הבאים:</p>
-                                            <ul className="list-disc list-inside bg-gray-100 p-2 rounded font-mono text-xs">
-                                                <li>VITE_SUPABASE_URL</li>
-                                                <li>VITE_SUPABASE_ANON_KEY</li>
-                                            </ul>
-                                            <p className="text-gray-600 text-xs">את הערכים האלו לוקחים מ-Supabase (תחת Project Settings - API) ושמים בהגדרות ה-Environment Variables בשרת האחסון שלך.</p>
                                         </div>
                                     )}
                                 </div>
