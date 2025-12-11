@@ -172,7 +172,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
             image: s.image_url,
             active: s.is_active,
             order: s.display_order
-        })));
+        }) as Slide));
       } else {
           setSlides(SLIDES);
       }
@@ -291,11 +291,8 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
         const ai = new GoogleGenAI({ apiKey: general.geminiKey });
         
-        // Configuration for "Deep Thinking"
-        const config: any = {
-             // Giving the model a budget to think for better quality
-             thinkingConfig: { thinkingBudget: 2048 }
-        };
+        // Removed thinkingConfig to fix permission errors
+        const config: any = {};
 
         if (type === 'json') {
             config.responseMimeType = 'application/json';
@@ -307,7 +304,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
             config: config
         });
         
-        // Safety check for empty response
         if (!response.text) {
              throw new Error("המודל החזיר תשובה ריקה. ייתכן שהנושא חסום או שהמפתח לא תקין.");
         }
@@ -315,7 +311,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return response.text;
     } catch (e: any) {
         console.error("AI Error:", e);
-        // Better error message extraction
         let msg = e.message || "שגיאה לא ידועה";
         if (msg.includes('403') || msg.includes('API key')) msg = "מפתח API לא תקין או חסר הרשאות.";
         throw new Error(msg);
@@ -337,8 +332,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const uploadImage = async (file: File): Promise<string | null> => {
       try {
           const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
-          
-          // 1. Upload
           const { data, error } = await supabase.storage.from('public-images').upload(fileName, file);
           
           if (error) {
@@ -351,7 +344,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
               return null;
           }
           
-          // 2. Get URL
           const { data: { publicUrl } } = supabase.storage.from('public-images').getPublicUrl(fileName);
           return publicUrl;
       } catch (e: any) {

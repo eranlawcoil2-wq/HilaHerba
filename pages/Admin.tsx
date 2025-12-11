@@ -118,8 +118,8 @@ const Admin: React.FC = () => {
 
   const handleSaveContent = async () => {
     if (!editingItem) return;
-    if (editingItem.type === 'plant' && !editingItem.hebrewName) return alert('נא למלא שם צמח');
-    if (editingItem.type !== 'plant' && !editingItem.title) return alert('נא למלא כותרת');
+    if (editingItem.type === 'plant' && !(editingItem as Plant).hebrewName) return alert('נא למלא שם צמח');
+    if (editingItem.type !== 'plant' && !(editingItem as Article).title) return alert('נא למלא כותרת');
 
     // Ensure tabs array exists
     const finalItem = { ...editingItem, tabs: editingItem.tabs || [] } as ContentItem;
@@ -204,7 +204,7 @@ const Admin: React.FC = () => {
       
       // --- PLANT PROMPT ---
       if (editingItem.type === 'plant') {
-          const plantName = editingItem.hebrewName || "Unnamed Plant";
+          const plantName = (editingItem as Plant).hebrewName || "Unnamed Plant";
           prompt = `
             You are a world-renowned expert in Clinical Herbal Medicine (Herbalist) with 30 years of experience.
             Your task is to write a comprehensive, deep, and highly professional profile for the medicinal plant: "${plantName}".
@@ -225,7 +225,7 @@ const Admin: React.FC = () => {
       } 
       // --- ARTICLE / CASE STUDY PROMPT ---
       else {
-          const title = editingItem.title || "Untitled Article";
+          const title = (editingItem as Article).title || "Untitled Article";
           const type = editingItem.type === 'case_study' ? 'Case Study' : 'Professional Article';
           prompt = `
             You are a senior editor of a prestigious Herbal Medicine Journal.
@@ -675,14 +675,14 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
 
                         {editingItem?.type === 'plant' ? (
                             <div className="grid md:grid-cols-2 gap-6">
-                                <div><label className="block font-bold text-sm">שם עברי</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).hebrewName} onChange={e => setEditingItem({...editingItem, hebrewName: e.target.value})} /></div>
-                                <div><label className="block font-bold text-sm">שם לטיני</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).latinName} onChange={e => setEditingItem({...editingItem, latinName: e.target.value})} /></div>
+                                <div><label className="block font-bold text-sm">שם עברי</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).hebrewName} onChange={e => setEditingItem({...editingItem, hebrewName: e.target.value} as ContentItem)} /></div>
+                                <div><label className="block font-bold text-sm">שם לטיני</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).latinName} onChange={e => setEditingItem({...editingItem, latinName: e.target.value} as ContentItem)} /></div>
                                 <div className="md:col-span-2">
                                      <div className="flex justify-between"><label className="block font-bold text-sm">תיאור קצר</label> <button onClick={() => handleAI('description', `Write a short description (Hebrew) for medicinal plant: ${(editingItem as Plant).hebrewName}`)}><Sparkles size={16} className="text-purple-500"/></button></div>
                                      <textarea className="w-full border p-2 rounded" rows={3} value={(editingItem as Plant).description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
                                 </div>
                                 <div><label className="block font-bold text-sm">קטגוריה</label>
-                                    <select className="w-full border p-2 rounded" value={(editingItem as Plant).category} onChange={e => setEditingItem({...editingItem, category: e.target.value as any})}>
+                                    <select className="w-full border p-2 rounded" value={(editingItem as Plant).category} onChange={e => setEditingItem({...editingItem, category: e.target.value as any} as ContentItem)}>
                                         <option value="general">כללי</option>
                                         <option value="relaxing">הרגעה</option>
                                         <option value="immune">חיסון</option>
@@ -690,16 +690,16 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                                         <option value="skin">עור</option>
                                     </select>
                                 </div>
-                                <div><label className="block font-bold text-sm">תגיות/יתרונות (פסיקים)</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).benefits?.join(', ')} onChange={e => setEditingItem({...editingItem, benefits: e.target.value.split(',').map(s => s.trim())})} /></div>
+                                <div><label className="block font-bold text-sm">תגיות/יתרונות (פסיקים)</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).benefits?.join(', ')} onChange={e => setEditingItem({...editingItem, benefits: e.target.value.split(',').map(s => s.trim())} as ContentItem)} /></div>
                             </div>
                         ) : (
                              <div className="grid gap-6">
-                                <div><label className="block font-bold text-sm">כותרת</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Article).title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} /></div>
+                                <div><label className="block font-bold text-sm">כותרת</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Article).title} onChange={e => setEditingItem({...editingItem, title: e.target.value} as ContentItem)} /></div>
                                 <div>
                                      <div className="flex justify-between"><label className="block font-bold text-sm">תקציר</label> <button onClick={() => handleAI('summary', `Write a summary (Hebrew) for article: ${(editingItem as Article).title}`)}><Sparkles size={16} className="text-purple-500"/></button></div>
                                      <textarea className="w-full border p-2 rounded" rows={3} value={(editingItem as Article).summary} onChange={e => setEditingItem({...editingItem, summary: e.target.value})} />
                                 </div>
-                                <div><label className="block font-bold text-sm">תגיות (פסיקים)</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Article).tags?.join(', ')} onChange={e => setEditingItem({...editingItem, tags: e.target.value.split(',').map(s => s.trim())})} /></div>
+                                <div><label className="block font-bold text-sm">תגיות (פסיקים)</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Article).tags?.join(', ')} onChange={e => setEditingItem({...editingItem, tags: e.target.value.split(',').map(s => s.trim())} as ContentItem)} /></div>
                                 <div><label className="block font-bold text-sm">תאריך</label><input type="date" className="w-full border p-2 rounded" value={(editingItem as Article).date} onChange={e => setEditingItem({...editingItem, date: e.target.value})} /></div>
                             </div>
                         )}
