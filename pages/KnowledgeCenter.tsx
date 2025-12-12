@@ -25,8 +25,8 @@ const KnowledgeCenter: React.FC = () => {
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
-  // Constants
-  const ITEMS_PER_PAGE = 9;
+  // Constants - UPDATED TO 12
+  const ITEMS_PER_PAGE = 12;
 
   // Extract all unique tags/benefits
   const allTags = useMemo(() => {

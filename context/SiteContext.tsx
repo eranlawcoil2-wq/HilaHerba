@@ -15,6 +15,8 @@ interface GeneralSettings {
   geminiKey?: string;
   unsplashKey?: string;
   adminNotes?: string;
+  adminEmail?: string;
+  adminPassword?: string;
 }
 
 interface SiteContextType {
@@ -32,6 +34,7 @@ interface SiteContextType {
   generateAIContent: (prompt: string, type: 'text' | 'json') => Promise<string>;
   searchImages: (query: string) => Promise<any[]>;
   uploadImage: (file: File) => Promise<string | null>;
+  restoreFromBackup: (backupData: any) => Promise<void>;
 }
 
 const defaultGeneral: GeneralSettings = {
@@ -44,7 +47,9 @@ const defaultGeneral: GeneralSettings = {
   aboutLong: 'ברוכים הבאים לאתר שלי...',
   geminiKey: '',
   unsplashKey: '',
-  adminNotes: ''
+  adminNotes: '',
+  adminEmail: 'admin@herbal.co.il',
+  adminPassword: 'admin123'
 };
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
@@ -160,7 +165,9 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
           aboutLong: settingsData.about_long,
           geminiKey: settingsData.gemini_key || '',
           unsplashKey: settingsData.unsplash_key || '',
-          adminNotes: settingsData.admin_notes || ''
+          adminNotes: settingsData.admin_notes || '',
+          adminEmail: settingsData.admin_email || 'admin@herbal.co.il',
+          adminPassword: settingsData.admin_password || 'admin123',
         });
       }
 
@@ -250,7 +257,9 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       about_long: settings.aboutLong,
       gemini_key: settings.geminiKey,
       unsplash_key: settings.unsplashKey,
-      admin_notes: settings.adminNotes
+      admin_notes: settings.adminNotes,
+      admin_email: settings.adminEmail,
+      admin_password: settings.adminPassword
     };
     const { error } = await supabase.from('general_settings').upsert(dbSettings);
     if (error) throw error;
@@ -323,6 +332,48 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
   };
 
+  const restoreFromBackup = async (backupData: any) => {
+      try {
+          setLoading(true);
+
+          // 1. Restore Settings
+          if (backupData.general) {
+              await updateGeneral(backupData.general);
+          }
+
+          // 2. Restore Slides (Bulk Upsert)
+          if (Array.isArray(backupData.slides) && backupData.slides.length > 0) {
+              const dbSlides = backupData.slides.map((s: Slide) => ({
+                  id: s.id,
+                  title: s.title,
+                  subtitle: s.subtitle,
+                  text: s.text,
+                  image_url: s.image,
+                  is_active: s.active,
+                  display_order: s.order
+              }));
+              const { error } = await supabase.from('hero_slides').upsert(dbSlides);
+              if (error) throw error;
+          }
+
+          // 3. Restore Content (Bulk Upsert)
+          if (Array.isArray(backupData.content) && backupData.content.length > 0) {
+              const dbContent = backupData.content.map(mapContentToDb);
+              const { error } = await supabase.from('content').upsert(dbContent);
+              if (error) throw error;
+          }
+
+          // Refresh Data
+          await fetchData();
+
+      } catch (error) {
+          console.error("Restore failed:", error);
+          throw error;
+      } finally {
+          setLoading(false);
+      }
+  };
+
   const generateAIContent = async (prompt: string, type: 'text' | 'json'): Promise<string> => {
     if (!general.geminiKey) throw new Error("חסר מפתח Gemini API בהגדרות");
     try {
@@ -378,7 +429,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         general, content, slides, loading, 
         updateGeneral, addContent, updateContent, deleteContent,
         addSlide, updateSlide, deleteSlide,
-        generateAIContent, searchImages, uploadImage
+        generateAIContent, searchImages, uploadImage, restoreFromBackup
     }}>
       {children}
     </SiteContext.Provider>

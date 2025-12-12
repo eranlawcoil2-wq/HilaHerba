@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud, Lock, LogIn, HardDrive, RotateCcw } from 'lucide-react';
 import { ContentItem, Slide, Plant, Article, Recipe } from '../types';
 import { PLANTS, ARTICLES, SLIDES as DEMO_SLIDES } from '../services/data';
 
@@ -12,11 +12,12 @@ const Admin: React.FC = () => {
       general, updateGeneral, 
       content, addContent, updateContent, deleteContent,
       slides, addSlide, updateSlide, deleteSlide,
-      generateAIContent, searchImages, uploadImage
+      generateAIContent, searchImages, uploadImage, restoreFromBackup
   } = useSite();
 
   // --- States ---
   const [generalForm, setGeneralForm] = useState(general);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Sync form with context data when it loads from DB
   useEffect(() => {
@@ -34,6 +35,12 @@ const Admin: React.FC = () => {
   const [isLoadingDemo, setIsLoadingDemo] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null); // New Success Message State
   
+  // Auth State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState(false);
+
   // Image Picker State
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [imagePickerTarget, setImagePickerTarget] = useState<'content' | 'slide' | null>(null);
@@ -58,12 +65,68 @@ const Admin: React.FC = () => {
       setTimeout(() => setSuccessMessage(null), 3000);
   };
 
+  const handleLogin = (e: React.FormEvent) => {
+      e.preventDefault();
+      const adminEmail = general.adminEmail || 'admin@herbal.co.il';
+      const adminPass = general.adminPassword || 'admin123';
+      
+      if (loginEmail === adminEmail && loginPassword === adminPass) {
+          setIsAuthenticated(true);
+          setLoginError(false);
+      } else {
+          setLoginError(true);
+      }
+  };
+
+  const handleBackup = () => {
+      const backupData = {
+          date: new Date().toISOString(),
+          general: general,
+          content: content,
+          slides: slides
+      };
+      
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `herbal_wisdom_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showSuccess("הגיבוי ירד למחשב שלך בהצלחה!");
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+          try {
+              const json = e.target?.result as string;
+              const backupData = JSON.parse(json);
+              
+              if (confirm("האם אתה בטוח שברצונך לשחזר את האתר מגיבוי זה? פעולה זו תדרוס נתונים קיימים.")) {
+                  await restoreFromBackup(backupData);
+                  showSuccess("האתר שוחזר בהצלחה!");
+              }
+          } catch (err: any) {
+              showError("שגיאה בטעינת הגיבוי: הקובץ לא תקין או פגום.");
+          } finally {
+              if (fileInputRef.current) fileInputRef.current.value = ""; // Reset input
+          }
+      };
+      reader.readAsText(file);
+  };
+
   const handleGeneralSave = async () => {
     try {
         await updateGeneral(generalForm);
         showSuccess('הגדרות נשמרו בהצלחה!');
     } catch (error: any) {
-        showError('שגיאה בשמירה:\n' + (error.message || error.toString()) + '\n\nוודא שהאתר מחובר למסד הנתונים ושביצעת את שלב ה-SQL.');
+        showError('שגיאה בשמירה:\n' + (error.message || error.toString()) + '\n\nוודא שהאתר מחובר למסד הנתונים ושביצעת את שלב ה-SQL העדכני.');
     }
   };
 
@@ -535,7 +598,9 @@ create table if not exists general_settings (
   about_long text,
   gemini_key text,
   unsplash_key text,
-  admin_notes text
+  admin_notes text,
+  admin_email text,
+  admin_password text
 );
 
 -- 2. הפעלת Realtime
@@ -587,8 +652,7 @@ create policy "Public Read Settings" on general_settings for select using (true)
 create policy "Public Write Settings" on general_settings for insert with check (true);
 create policy "Public Update Settings" on general_settings for update using (true);
 
--- 4. הרשאות לתמונות (Storage Policies) - קריטי להעלאת תמונות!
--- הערה: יצירת ה-Bucket עצמו חייבת להיעשות דרך הממשק אם היא נכשלת כאן, אך הפקודות הבאות יאפשרו העלאה.
+-- 4. הרשאות לתמונות (Storage Policies)
 do $$
 begin
     insert into storage.buckets (id, name, public) 
@@ -609,6 +673,64 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // --- LOGIN SCREEN ---
+  if (!isAuthenticated) {
+      return (
+          <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-4">
+              <div className="bg-white max-w-md w-full rounded-2xl shadow-xl p-8 border border-gray-100">
+                  <div className="text-center mb-8">
+                      <div className="bg-[#1a2e1a] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                          <Lock className="text-white" size={32} />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800">כניסה לניהול המערכת</h2>
+                      <p className="text-gray-500 mt-2 text-sm">אנא הזן את פרטי ההתחברות שלך</p>
+                  </div>
+                  
+                  <form onSubmit={handleLogin} className="space-y-6">
+                      <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">אימייל</label>
+                          <input 
+                            type="email" 
+                            value={loginEmail}
+                            onChange={e => setLoginEmail(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-all ltr"
+                            placeholder="admin@herbal.co.il"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">סיסמה</label>
+                          <input 
+                            type="password" 
+                            value={loginPassword}
+                            onChange={e => setLoginPassword(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-all ltr"
+                            placeholder="••••••••"
+                          />
+                      </div>
+                      
+                      {loginError && (
+                          <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2">
+                              <AlertTriangle size={16} />
+                              פרטי התחברות שגויים. נסה שנית.
+                          </div>
+                      )}
+
+                      <button 
+                        type="submit"
+                        className="w-full bg-[#1a2e1a] text-white py-3 rounded-xl font-bold hover:bg-green-900 shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                      >
+                         <LogIn size={20} /> התחבר
+                      </button>
+                  </form>
+                  <p className="text-center text-xs text-gray-400 mt-6">
+                      ברירת מחדל: admin@herbal.co.il / admin123
+                  </p>
+              </div>
+          </div>
+      );
+  }
+
+  // --- ADMIN DASHBOARD ---
   return (
     <div className="bg-[#FAF9F6] min-h-screen pt-24 pb-12 flex flex-col md:flex-row">
       
@@ -623,7 +745,7 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                 { id: 'general', label: 'הגדרות כלליות', icon: Settings },
                 { id: 'slides', label: 'ניהול סליידר', icon: MonitorPlay },
                 { id: 'content', label: 'ניהול תכנים', icon: FileText },
-                { id: 'connections', label: 'חיבורים ותזכורות', icon: Database },
+                { id: 'connections', label: 'חיבורים וגיבוי', icon: Database },
             ].map(item => (
                 <button
                     key={item.id}
@@ -644,50 +766,71 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
         {activeTab === 'general' && (
             <div className="max-w-3xl">
                 <h3 className="text-3xl font-bold text-gray-800 mb-8">הגדרות כלליות</h3>
-                <div className="space-y-6 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-8">
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">שם האתר</label>
+                                <input type="text" value={generalForm.siteName} onChange={e => setGeneralForm({...generalForm, siteName: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">שם המטפלת</label>
+                                <input type="text" value={generalForm.therapistName} onChange={e => setGeneralForm({...generalForm, therapistName: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+                            </div>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">טלפון</label>
+                                <input type="text" value={generalForm.phone} onChange={e => setGeneralForm({...generalForm, phone: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">אימייל (פניות)</label>
+                                <input type="text" value={generalForm.email} onChange={e => setGeneralForm({...generalForm, email: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+                            </div>
+                        </div>
+                        {/* NEW ADDRESS FIELD */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">שם האתר</label>
-                            <input type="text" value={generalForm.siteName} onChange={e => setGeneralForm({...generalForm, siteName: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+                            <label className="block text-sm font-bold text-gray-700 mb-2">כתובת הקליניקה</label>
+                            <div className="relative">
+                                <MapPin size={18} className="absolute top-3 left-3 text-gray-400" />
+                                <input 
+                                    type="text" 
+                                    value={generalForm.address} 
+                                    onChange={e => setGeneralForm({...generalForm, address: e.target.value})} 
+                                    className="w-full pl-10 pr-4 py-2 border rounded-lg" 
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">אודות (קצר)</label>
+                            <textarea value={generalForm.aboutShort} onChange={e => setGeneralForm({...generalForm, aboutShort: e.target.value})} className="w-full px-4 py-2 border rounded-lg" rows={2} />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">שם המטפלת</label>
-                            <input type="text" value={generalForm.therapistName} onChange={e => setGeneralForm({...generalForm, therapistName: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
-                        </div>
-                    </div>
-                     <div className="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">טלפון</label>
-                            <input type="text" value={generalForm.phone} onChange={e => setGeneralForm({...generalForm, phone: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
-                        </div>
-                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">אימייל</label>
-                            <input type="text" value={generalForm.email} onChange={e => setGeneralForm({...generalForm, email: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
-                        </div>
-                    </div>
-                    {/* NEW ADDRESS FIELD */}
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">כתובת הקליניקה</label>
-                        <div className="relative">
-                            <MapPin size={18} className="absolute top-3 left-3 text-gray-400" />
-                            <input 
-                                type="text" 
-                                value={generalForm.address} 
-                                onChange={e => setGeneralForm({...generalForm, address: e.target.value})} 
-                                className="w-full pl-10 pr-4 py-2 border rounded-lg" 
-                            />
+                            <label className="block text-sm font-bold text-gray-700 mb-2">אודות (מלא)</label>
+                            <textarea value={generalForm.aboutLong} onChange={e => setGeneralForm({...generalForm, aboutLong: e.target.value})} className="w-full px-4 py-2 border rounded-lg" rows={5} />
                         </div>
                     </div>
 
-                    <div>
-                         <label className="block text-sm font-bold text-gray-700 mb-2">אודות (קצר)</label>
-                         <textarea value={generalForm.aboutShort} onChange={e => setGeneralForm({...generalForm, aboutShort: e.target.value})} className="w-full px-4 py-2 border rounded-lg" rows={2} />
+                    {/* Admin Credentials Settings */}
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-orange-100">
+                        <div className="flex items-center gap-2 mb-4 text-orange-800">
+                             <Lock size={20} />
+                             <h4 className="font-bold text-lg">פרטי כניסה לניהול</h4>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-6 bg-orange-50 p-6 rounded-xl">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">אימייל למנהל</label>
+                                <input type="email" value={generalForm.adminEmail} onChange={e => setGeneralForm({...generalForm, adminEmail: e.target.value})} className="w-full px-4 py-2 border rounded-lg ltr" />
+                            </div>
+                             <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">סיסמה לניהול</label>
+                                <input type="text" value={generalForm.adminPassword} onChange={e => setGeneralForm({...generalForm, adminPassword: e.target.value})} className="w-full px-4 py-2 border rounded-lg ltr" />
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                         <label className="block text-sm font-bold text-gray-700 mb-2">אודות (מלא)</label>
-                         <textarea value={generalForm.aboutLong} onChange={e => setGeneralForm({...generalForm, aboutLong: e.target.value})} className="w-full px-4 py-2 border rounded-lg" rows={5} />
-                    </div>
-                    <button onClick={handleGeneralSave} className="bg-[#1a2e1a] text-white px-8 py-3 rounded-lg font-bold flex gap-2"><Save size={18}/> שמור</button>
+
+                    <button onClick={handleGeneralSave} className="bg-[#1a2e1a] text-white px-8 py-3 rounded-lg font-bold flex gap-2"><Save size={18}/> שמור הכל</button>
                 </div>
             </div>
         )}
@@ -785,216 +928,49 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
              </div>
         )}
 
-        {/* CONTENT TAB */}
-        {activeTab === 'content' && (
-             <div className="max-w-5xl">
-                <div className="flex justify-between items-center mb-8">
-                     <h3 className="text-3xl font-bold text-gray-800">ניהול תכנים</h3>
-                     <button onClick={handleCreateNewContent} className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2"><Plus size={20} /> הוסף תוכן</button>
-                </div>
-
-                {!isEditingContent ? (
-                    <>
-                        {content.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-300">
-                                {/* Empty State UI */}
-                                <div className="bg-green-100 p-4 rounded-full mb-4">
-                                    <Database size={48} className="text-green-600" />
-                                </div>
-                                <h3 className="text-xl font-bold text-gray-800 mb-2">לא נמצא תוכן באתר</h3>
-                                <p className="text-gray-500 max-w-md text-center mb-8">
-                                    האתר מחובר למסד הנתונים אך הטבלה ריקה. ניתן לטעון נתוני הדגמה (צמחים ומאמרים) כדי להתחיל לעבוד.
-                                </p>
-                                <button 
-                                    onClick={handleLoadDemoData} 
-                                    disabled={isLoadingDemo}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all"
-                                >
-                                    {isLoadingDemo ? (
-                                        <>טוען נתונים...</>
-                                    ) : (
-                                        <><DownloadCloud size={20}/> טען נתוני הדגמה</>
-                                    )}
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="bg-white rounded-2xl shadow border overflow-hidden">
-                                <table className="w-full text-right">
-                                    <thead className="bg-gray-50 border-b">
-                                        <tr>
-                                            <th className="px-6 py-4">תמונה</th>
-                                            <th className="px-6 py-4">כותרת</th>
-                                            <th className="px-6 py-4">סוג</th>
-                                            <th className="px-6 py-4">פעולות</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {content.map(item => (
-                                            <tr key={item.id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4"><img src={item.imageUrl} className="w-10 h-10 rounded object-cover" alt=""/></td>
-                                                <td className="px-6 py-4 font-bold">{item.type === 'plant' ? item.hebrewName : item.title}</td>
-                                                <td className="px-6 py-4"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{item.type}</span></td>
-                                                <td className="px-6 py-4 flex gap-2">
-                                                    <button onClick={() => {setEditingItem(JSON.parse(JSON.stringify(item))); setIsEditingContent(true);}} className="text-blue-600"><Edit2 size={18}/></button>
-                                                    <button onClick={() => handleDeleteContent(item.id)} className="text-red-600"><Trash2 size={18}/></button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </>
-                ) : (
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border space-y-6">
-                         <div className="flex justify-between">
-                            <h4 className="font-bold text-xl">עריכת תוכן</h4>
-                            <button onClick={() => setIsEditingContent(false)}>ביטול</button>
-                        </div>
-                        
-                        <div className="grid md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block font-bold text-sm mb-1">סוג</label>
-                                <select 
-                                    value={editingItem?.type} 
-                                    onChange={e => setEditingItem({...editingItem, type: e.target.value as any})}
-                                    className="w-full border p-2 rounded"
-                                >
-                                    <option value="plant">צמח מרפא</option>
-                                    <option value="article">מאמר</option>
-                                    <option value="recipe">מתכון</option>
-                                    <option value="case_study">מקרה אירוע</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block font-bold text-sm mb-1">תמונה ראשית</label>
-                                <div className="flex gap-2">
-                                    <input type="text" value={editingItem?.imageUrl} onChange={e => setEditingItem({...editingItem, imageUrl: e.target.value})} className="w-full border p-2 rounded ltr" />
-                                     <button 
-                                        onClick={() => { setImagePickerTarget('content'); setShowImagePicker(true); }}
-                                        className="bg-gray-100 px-3 rounded hover:bg-gray-200"
-                                    >
-                                        <ImageIcon size={18}/>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {editingItem?.type === 'plant' ? (
-                            <div className="grid md:grid-cols-2 gap-6">
-                                <div><label className="block font-bold text-sm mb-1">שם עברי</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).hebrewName} onChange={e => setEditingItem({...editingItem, hebrewName: e.target.value} as ContentItem)} /></div>
-                                <div><label className="block font-bold text-sm mb-1">שם לטיני</label><input type="text" className="w-full border p-2 rounded ltr" value={(editingItem as Plant).latinName} onChange={e => setEditingItem({...editingItem, latinName: e.target.value} as ContentItem)} /></div>
-                                <div className="md:col-span-2">
-                                     <div className="flex justify-between items-end mb-1"><label className="block font-bold text-sm">תיאור קצר (מופיע בראש הטאב הכללי)</label> <button onClick={() => handleAI('description', `Write a short description (Hebrew) for medicinal plant: ${(editingItem as Plant).hebrewName}`)}><Sparkles size={16} className="text-purple-500"/></button></div>
-                                     <textarea className="w-full border p-2 rounded" rows={4} value={(editingItem as Plant).description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
-                                </div>
-                                <div><label className="block font-bold text-sm mb-1">קטגוריה</label>
-                                    <select className="w-full border p-2 rounded" value={(editingItem as Plant).category} onChange={e => setEditingItem({...editingItem, category: e.target.value as any} as ContentItem)}>
-                                        <option value="general">כללי</option>
-                                        <option value="relaxing">הרגעה</option>
-                                        <option value="immune">חיסון</option>
-                                        <option value="digestive">עיכול</option>
-                                        <option value="skin">עור</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block font-bold text-sm mb-1">סגולות עיקריות (מופרד בפסיקים)</label>
-                                    <p className="text-xs text-gray-500 mb-1">אלו הנקודות שמופיעות ברשימה בטאב הכללי בצד המודל</p>
-                                    <textarea 
-                                        className="w-full border p-2 rounded" 
-                                        rows={3} 
-                                        value={(editingItem as Plant).benefits?.join(', ')} 
-                                        onChange={e => setEditingItem({...editingItem, benefits: e.target.value.split(',').map(s => s.trim())} as ContentItem)} 
-                                    />
-                                </div>
-                            </div>
-                        ) : (
-                             <div className="grid gap-6">
-                                <div><label className="block font-bold text-sm">כותרת</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Article).title} onChange={e => setEditingItem({...editingItem, title: e.target.value} as ContentItem)} /></div>
-                                <div>
-                                     <div className="flex justify-between"><label className="block font-bold text-sm">תקציר</label> <button onClick={() => handleAI('summary', `Write a summary (Hebrew) for article: ${(editingItem as Article).title}`)}><Sparkles size={16} className="text-purple-500"/></button></div>
-                                     <textarea className="w-full border p-2 rounded" rows={3} value={(editingItem as Article).summary} onChange={e => setEditingItem({...editingItem, summary: e.target.value})} />
-                                </div>
-                                <div><label className="block font-bold text-sm">תגיות (פסיקים)</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Article).tags?.join(', ')} onChange={e => setEditingItem({...editingItem, tags: e.target.value.split(',').map(s => s.trim())} as ContentItem)} /></div>
-                                <div><label className="block font-bold text-sm">תאריך</label><input type="date" className="w-full border p-2 rounded" value={(editingItem as Article).date} onChange={e => setEditingItem({...editingItem, date: e.target.value})} /></div>
-                            </div>
-                        )}
-
-                        {/* Dynamic Tabs Section */}
-                        <div className="border-t pt-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h4 className="font-bold text-lg">תוכן נוסף (טאבים)</h4>
-                                <div className="flex gap-2">
-                                     <button onClick={handleAutoTabs} className="bg-purple-600 text-white shadow-lg px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-purple-700 transition-colors" disabled={aiLoading}>
-                                        {aiLoading ? 'חושב וכותב (זה יכול לקחת רגע)...' : <><Sparkles size={16}/> צור תוכן מקצועי מלא (AI)</>}
-                                     </button>
-                                     <button 
-                                        onClick={() => setEditingItem(prev => ({...prev, tabs: [...(prev?.tabs || []), { id: Date.now().toString(), title: 'טאב חדש', content: '' }] }))}
-                                        className="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg text-sm flex items-center gap-1"
-                                     >
-                                        <Plus size={14}/> הוסף טאב
-                                     </button>
-                                </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                                {editingItem?.tabs?.map((tab, idx) => (
-                                    <div key={tab.id} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative group">
-                                        <button 
-                                            onClick={() => setEditingItem(prev => ({...prev, tabs: prev?.tabs?.filter(t => t.id !== tab.id)}))}
-                                            className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                        <div className="mb-2">
-                                            <label className="text-xs font-bold text-gray-500">כותרת הטאב</label>
-                                            <input 
-                                                type="text" 
-                                                className="w-full bg-white border p-2 rounded text-sm font-bold"
-                                                value={tab.title}
-                                                onChange={e => {
-                                                    const newTabs = [...(editingItem.tabs || [])];
-                                                    newTabs[idx].title = e.target.value;
-                                                    setEditingItem({...editingItem, tabs: newTabs});
-                                                }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between">
-                                                <label className="text-xs font-bold text-gray-500">תוכן</label>
-                                                <button onClick={() => handleAI('tab_content', `Write extensive professional content for tab "${tab.title}" for subject: ${editingItem.type === 'plant' ? (editingItem as any).hebrewName : (editingItem as any).title}`)}><Sparkles size={14} className="text-purple-400 hover:text-purple-600"/></button>
-                                            </div>
-                                            <textarea 
-                                                rows={5}
-                                                className="w-full bg-white border p-2 rounded text-sm"
-                                                value={tab.content}
-                                                 onChange={e => {
-                                                    const newTabs = [...(editingItem.tabs || [])];
-                                                    newTabs[idx].content = e.target.value;
-                                                    setEditingItem({...editingItem, tabs: newTabs});
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                                {(!editingItem?.tabs || editingItem.tabs.length === 0) && <p className="text-gray-400 text-sm text-center">אין טאבים. לחץ על כפתור ה-AI הסגול ליצירת מאמר שלם.</p>}
-                            </div>
-                        </div>
-
-                        <div className="pt-4 border-t flex gap-4">
-                             <button onClick={handleSaveContent} className="bg-green-600 text-white px-8 py-2 rounded font-bold">שמור פריט</button>
-                             <button onClick={() => setIsEditingContent(false)} className="bg-gray-200 text-gray-800 px-8 py-2 rounded font-bold">ביטול</button>
-                        </div>
-                    </div>
-                )}
-             </div>
-        )}
-
-        {/* ... (Connections Tab logic remains same) ... */}
+        {/* CONNECTIONS TAB */}
         {activeTab === 'connections' && (
             <div className="max-w-4xl">
-                <h3 className="text-3xl font-bold mb-6">חיבורים והגדרות טכניות</h3>
-                {/* ... existing code ... */}
+                <h3 className="text-3xl font-bold mb-6">חיבורים, גיבויים והגדרות טכניות</h3>
+                
+                {/* NEW BACKUP SECTION */}
+                <div className="bg-blue-50 p-6 rounded-2xl shadow-sm border border-blue-200 mb-8">
+                     <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-3 text-blue-800">
+                             <HardDrive size={24} />
+                             <h4 className="font-bold text-xl">גיבוי ושחזור נתונים</h4>
+                        </div>
+                     </div>
+                     <p className="text-blue-700 text-sm mb-4 max-w-xl">
+                         ניתן להוריד גיבוי מלא של האתר למחשב, או לשחזר את האתר מקובץ גיבוי קיים.
+                     </p>
+                     
+                     <div className="flex gap-4 flex-wrap">
+                        <button 
+                            onClick={handleBackup}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all"
+                        >
+                            <DownloadCloud size={20} /> הורד גיבוי (JSON)
+                        </button>
+
+                        <div className="relative">
+                            <input 
+                                type="file" 
+                                accept=".json" 
+                                ref={fileInputRef}
+                                className="hidden"
+                                onChange={handleFileSelect}
+                            />
+                            <button 
+                                onClick={() => fileInputRef.current?.click()}
+                                className="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all"
+                            >
+                                <RotateCcw size={20} /> שחזר מגיבוי
+                            </button>
+                        </div>
+                     </div>
+                </div>
+
                 <div className="grid lg:grid-cols-2 gap-8 items-start">
                     {/* ... (API Key inputs) ... */}
                     <div className="space-y-6">
