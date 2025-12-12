@@ -781,10 +781,6 @@ NOTIFY pgrst, 'reload config';
                         <HelpCircle size={14} /> שכחתי סיסמה
                     </button>
                   </div>
-
-                  <p className="text-center text-xs text-gray-400 mt-2">
-                      ברירת מחדל: hilatams@gmail.com / 123qweAsd
-                  </p>
               </div>
           </div>
       );
