@@ -43,14 +43,21 @@ const Admin: React.FC = () => {
   // Accordion State for Instructions
   const [openInstruction, setOpenInstruction] = useState<'supabase_sql' | 'supabase_storage' | 'deploy' | null>('deploy');
 
-  // --- Handlers ---
+  // Error Modal State
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorCopied, setErrorCopied] = useState(false);
+
+  // --- Helpers ---
+  const showError = (msg: string) => {
+      setErrorMessage(msg);
+  };
 
   const handleGeneralSave = async () => {
     try {
         await updateGeneral(generalForm);
         alert('הגדרות נשמרו בהצלחה!');
     } catch (error) {
-        alert('שגיאה בשמירה. וודא שהאתר מחובר למסד הנתונים ושביצעת את שלב ה-SQL.');
+        showError('שגיאה בשמירה. וודא שהאתר מחובר למסד הנתונים ושביצעת את שלב ה-SQL.');
     }
   };
 
@@ -82,7 +89,7 @@ const Admin: React.FC = () => {
         }
         alert(`התהליך הסתיים. ${count} פריטים נוספו בהצלחה!`);
     } catch (e: any) {
-        alert('שגיאה בטעינת נתונים: ' + e.message);
+        showError('שגיאה בטעינת נתונים: ' + e.message);
     } finally {
         setIsLoadingDemo(false);
     }
@@ -133,7 +140,7 @@ const Admin: React.FC = () => {
         setIsEditingContent(false);
         setEditingItem(null);
     } catch (e) {
-        alert('שגיאה בשמירה. וודא שהרשאות ה-SQL הופעלו ב-Supabase.');
+        showError('שגיאה בשמירה. וודא שהרשאות ה-SQL הופעלו ב-Supabase.');
     }
   };
 
@@ -151,7 +158,7 @@ const Admin: React.FC = () => {
           setIsEditingSlide(false);
           setEditingSlide(null);
       } catch (e) {
-          alert('שגיאה בשמירה. וודא שהרשאות ה-SQL הופעלו.');
+          showError('שגיאה בשמירה. וודא שהרשאות ה-SQL הופעלו.');
       }
   };
 
@@ -165,7 +172,7 @@ const Admin: React.FC = () => {
 
   // --- AI Logic ---
   const handleAI = async (targetField: string, promptBase: string) => {
-      if (!general.geminiKey) return alert("שגיאה: חסר מפתח Gemini. נא להגדיר בטאב 'חיבורים' ולשמור.");
+      if (!general.geminiKey) return showError("שגיאה: חסר מפתח Gemini. נא להגדיר בטאב 'חיבורים' ולשמור.");
       setAiLoading(true);
       try {
           // Enhancing the prompt for quality
@@ -197,14 +204,14 @@ const Admin: React.FC = () => {
               errorMsg = "השרתים של גוגל עמוסים כרגע (שגיאה 503).\nזה קורה לעיתים במודלים חינמיים.\nאנא המתן דקה ונסה שוב.";
           }
           
-          alert(`שגיאה:\n${errorMsg}`);
+          showError(`שגיאה:\n${errorMsg}`);
       } finally {
           setAiLoading(false);
       }
   };
 
   const handleAutoTabs = async () => {
-      if (!editingItem || !general.geminiKey) return alert("חסר מפתח AI או פריט לעריכה. וודא שהמפתח נשמר בטאב 'חיבורים'.");
+      if (!editingItem || !general.geminiKey) return showError("חסר מפתח AI או פריט לעריכה. וודא שהמפתח נשמר בטאב 'חיבורים'.");
       setAiLoading(true);
       
       let prompt = "";
@@ -249,8 +256,11 @@ const Admin: React.FC = () => {
           `;
       }
       
+      let rawRes = ""; // Capture raw output for debugging
+
       try {
           const res = await generateAIContent(prompt, 'json');
+          rawRes = res;
           
           // Robust JSON extraction
           let jsonString = res.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -282,11 +292,14 @@ const Admin: React.FC = () => {
               errorMsg = "השרתים של גוגל עמוסים כרגע (שגיאה 503).\nזה קורה לעיתים במודלים חינמיים כאשר יש עומס עולמי.\n\nאנא המתן דקה-שתיים ונסה שוב.";
           } else if (errorMsg.includes('SyntaxError') || errorMsg.includes('JSON')) {
               errorMsg = "המודל החזיר תשובה בפורמט לא תקין.\nלפעמים זה קורה באופן אקראי. אנא נסה ללחוץ שוב.";
+              if (rawRes) {
+                 errorMsg += `\n\n--- מידע טכני להעתקה (Raw Output) ---\n${rawRes.substring(0, 500)}${rawRes.length > 500 ? '...' : ''}`;
+              }
           } else if (errorMsg.includes('403') || errorMsg.includes('key')) {
               errorMsg = "מפתח ה-API אינו תקין או שנחסם.\nבדוק את ההגדרות בטאב 'חיבורים' וודא שהעתקת את המפתח במלואו.";
           }
           
-          alert(`הודעת מערכת:\n${errorMsg}`);
+          showError(`הודעת מערכת:\n${errorMsg}`);
       } finally {
           setAiLoading(false);
       }
@@ -294,7 +307,7 @@ const Admin: React.FC = () => {
 
   // --- Image Picker Logic ---
   const handleImageSearch = async () => {
-      if (!general.unsplashKey) return alert("חסר מפתח Unsplash בהגדרות");
+      if (!general.unsplashKey) return showError("חסר מפתח Unsplash בהגדרות");
       const results = await searchImages(searchQuery);
       setSearchResults(results);
   };
@@ -1007,6 +1020,46 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                   </div>
               </div>
           </div>
+      )}
+
+      {/* NEW: Error / Copyable Modal */}
+      {errorMessage && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setErrorMessage(null)}>
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 relative animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                <button onClick={() => setErrorMessage(null)} className="absolute top-4 left-4 p-2 hover:bg-gray-100 rounded-full"><X size={20}/></button>
+                
+                <div className="flex items-center gap-3 mb-4 text-red-600">
+                    <AlertTriangle size={28} />
+                    <h3 className="text-xl font-bold">שגיאה / הודעת מערכת</h3>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 max-h-[300px] overflow-y-auto">
+                    <p className="whitespace-pre-wrap text-gray-800 font-mono text-sm leading-relaxed select-text" dir="ltr">
+                        {errorMessage}
+                    </p>
+                </div>
+
+                <div className="flex gap-3">
+                    <button 
+                        onClick={() => {
+                            navigator.clipboard.writeText(errorMessage);
+                            setErrorCopied(true);
+                            setTimeout(() => setErrorCopied(false), 2000);
+                        }} 
+                        className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${errorCopied ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+                    >
+                        {errorCopied ? <Check size={18} /> : <Copy size={18} />}
+                        {errorCopied ? 'הועתק!' : 'העתק שגיאה'}
+                    </button>
+                    <button 
+                        onClick={() => setErrorMessage(null)} 
+                        className="flex-1 bg-[#1a2e1a] text-white py-3 rounded-xl font-bold hover:bg-green-900 shadow-lg"
+                    >
+                        סגור
+                    </button>
+                </div>
+            </div>
+        </div>
       )}
     </div>
   );
