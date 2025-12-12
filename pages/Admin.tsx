@@ -872,24 +872,6 @@ NOTIFY pgrst, 'reload config';
                         </div>
                     </div>
 
-                    {/* Admin Credentials Settings */}
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-orange-100">
-                        <div className="flex items-center gap-2 mb-4 text-orange-800">
-                             <Lock size={20} />
-                             <h4 className="font-bold text-lg">פרטי כניסה לניהול</h4>
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-6 bg-orange-50 p-6 rounded-xl">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">אימייל למנהל</label>
-                                <input type="email" value={generalForm.adminEmail} onChange={e => setGeneralForm({...generalForm, adminEmail: e.target.value})} className="w-full px-4 py-2 border rounded-lg ltr" />
-                            </div>
-                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">סיסמה לניהול</label>
-                                <input type="text" value={generalForm.adminPassword} onChange={e => setGeneralForm({...generalForm, adminPassword: e.target.value})} className="w-full px-4 py-2 border rounded-lg ltr" />
-                            </div>
-                        </div>
-                    </div>
-
                     <button onClick={handleGeneralSave} className="bg-[#1a2e1a] text-white px-8 py-3 rounded-lg font-bold flex gap-2"><Save size={18}/> שמור הכל</button>
                 </div>
             </div>

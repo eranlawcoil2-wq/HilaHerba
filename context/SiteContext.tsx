@@ -260,8 +260,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       gemini_key: settings.geminiKey,
       unsplash_key: settings.unsplashKey,
       admin_notes: settings.adminNotes,
-      admin_email: settings.adminEmail,
-      admin_password: settings.adminPassword
+      // Removed admin_email and admin_password from here to prevent DB errors
     };
     const { error } = await supabase.from('general_settings').upsert(dbSettings);
     if (error) throw error;
