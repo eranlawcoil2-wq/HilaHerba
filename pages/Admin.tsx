@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud, Lock, LogIn, HardDrive, RotateCcw, RefreshCw, Link as LinkIcon } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud, Lock, LogIn, HardDrive, RotateCcw, RefreshCw, Link as LinkIcon, HelpCircle } from 'lucide-react';
 import { ContentItem, Slide, Plant, Article, Recipe } from '../types';
 import { PLANTS, ARTICLES, SLIDES as DEMO_SLIDES } from '../services/data';
 import { supabaseUrl } from '../services/supabaseClient';
@@ -69,17 +69,32 @@ const Admin: React.FC = () => {
   const handleLogin = (e: React.FormEvent) => {
       e.preventDefault();
       
-      const dbEmail = general.adminEmail || 'admin@herbal.co.il';
-      const dbPass = general.adminPassword || 'admin123';
+      const dbEmail = general.adminEmail;
+      const dbPass = general.adminPassword;
       
       const isDbMatch = loginEmail === dbEmail && loginPassword === dbPass;
-      const isDefaultMatch = loginEmail === 'admin@herbal.co.il' && loginPassword === 'admin123';
+      // Also allow the hardcoded requested credentials explicitly
+      const isHardcodedMatch = loginEmail === 'hilatams@gmail.com' && loginPassword === '123qweAsd';
 
-      if (isDbMatch || isDefaultMatch) {
+      if (isDbMatch || isHardcodedMatch) {
           setIsAuthenticated(true);
           setLoginError(false);
       } else {
           setLoginError(true);
+      }
+  };
+
+  const handleForgotPassword = () => {
+      const email = prompt("הכנס את כתובת האימייל שלך לשחזור:");
+      
+      if (email && email.trim().toLowerCase() === 'hilatams@gmail.com') {
+          // Open mail client with pre-filled details securely sent to self
+          const subject = "שחזור סיסמה - Herbal Wisdom";
+          const body = "הסיסמה שלך למערכת הניהול היא:\n\n123qweAsd\n\nנא לשמור במקום בטוח ולמחוק את המייל הזה לאחר השימוש.";
+          
+          window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      } else if (email) {
+          alert('אימייל זה אינו תואם לאימייל המערכת המוגדר.');
       }
   };
 
@@ -756,8 +771,19 @@ NOTIFY pgrst, 'reload config';
                          <LogIn size={20} /> התחבר
                       </button>
                   </form>
-                  <p className="text-center text-xs text-gray-400 mt-6">
-                      ברירת מחדל: admin@herbal.co.il / admin123
+                  
+                  {/* Forgot Password Link */}
+                  <div className="mt-6 text-center">
+                    <button 
+                        onClick={handleForgotPassword}
+                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center justify-center gap-1 mx-auto"
+                    >
+                        <HelpCircle size={14} /> שכחתי סיסמה
+                    </button>
+                  </div>
+
+                  <p className="text-center text-xs text-gray-400 mt-2">
+                      ברירת מחדל: hilatams@gmail.com / 123qweAsd
                   </p>
               </div>
           </div>

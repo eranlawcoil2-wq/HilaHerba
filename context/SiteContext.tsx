@@ -48,8 +48,9 @@ const defaultGeneral: GeneralSettings = {
   geminiKey: '',
   unsplashKey: '',
   adminNotes: '',
-  adminEmail: 'admin@herbal.co.il',
-  adminPassword: 'admin123'
+  // Updated hardcoded credentials as requested
+  adminEmail: 'hilatams@gmail.com',
+  adminPassword: '123qweAsd'
 };
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
@@ -166,9 +167,9 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
           geminiKey: settingsData.gemini_key || '',
           unsplashKey: settingsData.unsplash_key || '',
           adminNotes: settingsData.admin_notes || '',
-          // IMPORTANT: Fallback to default if DB is null
-          adminEmail: settingsData.admin_email || 'admin@herbal.co.il',
-          adminPassword: settingsData.admin_password || 'admin123',
+          // IMPORTANT: Fallback to hardcoded if DB is null, but prioritize DB if exists
+          adminEmail: settingsData.admin_email || 'hilatams@gmail.com',
+          adminPassword: settingsData.admin_password || '123qweAsd',
         });
       }
 
