@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Leaf, MessageCircle, Accessibility, Eye, Type, Minus, Phone, Mail, MapPin, Navigation, Lock } from 'lucide-react';
+import { Menu, X, Leaf, MessageCircle, Accessibility, Eye, Type, Minus, Phone, Mail, MapPin, Navigation, Lock, Underline, Palette, ZapOff } from 'lucide-react';
 import { NAV_ITEMS } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import LegalModal, { LegalType } from './LegalModal';
@@ -18,8 +18,14 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   // Accessibility State
   const [isAccessMenuOpen, setIsAccessMenuOpen] = useState(false);
+  
+  // Accessibility Features
+  const [textSizeLevel, setTextSizeLevel] = useState(0); // 0 = normal, 1 = large, 2 = extra large
   const [highContrast, setHighContrast] = useState(false);
-  const [largeText, setLargeText] = useState(false);
+  const [grayscale, setGrayscale] = useState(false);
+  const [highlightLinks, setHighlightLinks] = useState(false);
+  const [readableFont, setReadableFont] = useState(false);
+  const [stopAnimations, setStopAnimations] = useState(false);
 
   const location = useLocation();
 
@@ -35,8 +41,55 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     setIsMobileMenuOpen(false);
   }, [location]);
 
+  // Construct Accessibility Classes
+  const getAccessClasses = () => {
+      let classes = "min-h-screen flex flex-col transition-all duration-300 ";
+      
+      // Text Size
+      if (textSizeLevel === 1) classes += " text-lg ";
+      if (textSizeLevel === 2) classes += " text-xl ";
+
+      // Visuals
+      if (highContrast) classes += " contrast-125 saturate-150 ";
+      if (grayscale) classes += " grayscale ";
+      if (readableFont) classes += " font-sans-system "; // Will require inline style or tailwind config, simplified here by logic below
+      
+      return classes;
+  };
+
+  const resetAccess = () => {
+      setTextSizeLevel(0);
+      setHighContrast(false);
+      setGrayscale(false);
+      setHighlightLinks(false);
+      setReadableFont(false);
+      setStopAnimations(false);
+  };
+
+  const toggleTextSize = () => {
+      setTextSizeLevel(prev => (prev + 1) % 3);
+  };
+
   return (
-    <div className={`min-h-screen flex flex-col font-sans text-gray-800 bg-[#FAF9F6] transition-all duration-300 ${highContrast ? 'grayscale contrast-125' : ''} ${largeText ? 'text-lg' : ''}`}>
+    <div 
+        className={getAccessClasses()} 
+        style={{ 
+            fontFamily: readableFont ? 'Arial, sans-serif' : undefined,
+            backgroundColor: highContrast ? '#ffffff' : '#FAF9F6',
+            color: highContrast ? '#000000' : undefined
+        }}
+    >
+      {/* Global Style Overrides for Accessibility */}
+      <style>{`
+        ${highlightLinks ? `a { text-decoration: underline !important; font-weight: bold !important; color: #0000EE !important; }` : ''}
+        ${stopAnimations ? `* { animation: none !important; transition: none !important; }` : ''}
+        ${highContrast ? `
+            .bg-[#1a2e1a] { background-color: #000000 !important; }
+            .text-green-800 { color: #000000 !important; }
+            button { border: 2px solid #000 !important; }
+        ` : ''}
+      `}</style>
+
       {/* Navigation */}
       <nav
         className={`fixed top-0 w-full z-50 transition-all duration-300 ease-in-out ${
@@ -48,11 +101,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <Link to="/" className="flex items-center gap-2 group">
             <div className="relative">
                 <Leaf className={`w-8 h-8 ${isScrolled ? 'text-green-800' : 'text-green-900'} transition-colors`} />
-                <motion.div 
-                    className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full opacity-70"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                />
+                {!stopAnimations && (
+                    <motion.div 
+                        className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full opacity-70"
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 3, repeat: Infinity }}
+                    />
+                )}
             </div>
             <span className={`text-2xl font-bold tracking-wide ${isScrolled ? 'text-gray-900' : 'text-gray-900'}`}>
               {general.siteName}
@@ -67,7 +122,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 to={item.path}
                 className={`font-medium transition-colors hover:text-green-700 relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-green-700 after:transition-all hover:after:w-full ${
                     location.pathname === item.path ? 'text-green-800 after:w-full' : 'text-gray-700'
-                } ${largeText ? 'text-xl' : 'text-lg'}`}
+                }`}
               >
                 {item.label}
               </Link>
@@ -170,7 +225,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="flex items-center gap-3">
               <span>© {new Date().getFullYear()} {general.siteName}. כל הזכויות שמורות.</span>
               
-              {/* ADMIN LINK - Only visible on Contact page - Updated visibility */}
+              {/* ADMIN LINK - Only visible on Contact page */}
               {location.pathname === '/contact' && (
                   <Link to="/admin" className="text-white/30 hover:text-white transition-colors p-2" aria-label="כניסה לניהול">
                       <Lock size={16} />
@@ -203,26 +258,62 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     initial={{ opacity: 0, y: 10, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                    className="mb-2 bg-white rounded-xl shadow-xl p-3 border border-gray-100 min-w-[160px] absolute bottom-full left-0 mb-4"
+                    className="mb-2 bg-white rounded-xl shadow-2xl p-4 border border-gray-100 w-[240px] absolute bottom-full left-0 mb-4 origin-bottom-left"
                 >
+                    <div className="flex justify-between items-center mb-3 border-b pb-2">
+                        <span className="font-bold text-gray-800 flex items-center gap-2"><Accessibility size={18}/> נגישות</span>
+                        <button onClick={() => setIsAccessMenuOpen(false)}><X size={16}/></button>
+                    </div>
+                    
                     <div className="space-y-2">
                         <button 
-                            onClick={() => setLargeText(!largeText)}
-                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${largeText ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'}`}
+                            onClick={toggleTextSize}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${textSizeLevel > 0 ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-gray-50 text-gray-700'}`}
                         >
-                            <Type size={16} /> הגדל טקסט
+                            <span className="flex items-center gap-2"><Type size={16} /> גודל טקסט</span>
+                            <span className="text-xs bg-white px-2 rounded border">{textSizeLevel === 0 ? 'רגיל' : textSizeLevel === 1 ? 'גדול' : 'ענק'}</span>
                         </button>
+
                         <button 
                             onClick={() => setHighContrast(!highContrast)}
-                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${highContrast ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'}`}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${highContrast ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-gray-50 text-gray-700'}`}
                         >
                             <Eye size={16} /> ניגודיות גבוהה
                         </button>
-                         <button 
-                            onClick={() => {setLargeText(false); setHighContrast(false);}}
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-red-50 text-red-600 border-t border-gray-100 mt-1"
+
+                        <button 
+                            onClick={() => setGrayscale(!grayscale)}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${grayscale ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-gray-50 text-gray-700'}`}
                         >
-                            <Minus size={16} /> איפוס
+                            <Palette size={16} /> גווני אפור
+                        </button>
+
+                        <button 
+                            onClick={() => setHighlightLinks(!highlightLinks)}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${highlightLinks ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-gray-50 text-gray-700'}`}
+                        >
+                            <Underline size={16} /> הדגשת קישורים
+                        </button>
+
+                        <button 
+                            onClick={() => setReadableFont(!readableFont)}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${readableFont ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-gray-50 text-gray-700'}`}
+                        >
+                            <span className="font-sans">א</span> פונט קריא
+                        </button>
+
+                        <button 
+                            onClick={() => setStopAnimations(!stopAnimations)}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${stopAnimations ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-gray-50 text-gray-700'}`}
+                        >
+                            <ZapOff size={16} /> עצור אנימציות
+                        </button>
+
+                         <button 
+                            onClick={resetAccess}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-red-50 text-red-600 border border-red-100 mt-2 font-bold"
+                        >
+                            <Minus size={16} /> איפוס הגדרות
                         </button>
                     </div>
                 </motion.div>
@@ -232,8 +323,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {/* Accessibility Button */}
         <button 
             onClick={() => setIsAccessMenuOpen(!isAccessMenuOpen)}
-            className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300 relative"
-            aria-label="נגישות"
+            className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300 relative z-50"
+            aria-label="תפריט נגישות"
         >
             <Accessibility size={24} />
         </button>
@@ -243,7 +334,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             href={`https://wa.me/972${general.phone.replace(/\D/g,'')}`} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="w-12 h-12 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-green-300"
+            className="w-12 h-12 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-green-300 relative z-40"
             aria-label="Chat on WhatsApp"
         >
             <MessageCircle size={24} />
