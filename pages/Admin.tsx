@@ -67,10 +67,15 @@ const Admin: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
       e.preventDefault();
-      const adminEmail = general.adminEmail || 'admin@herbal.co.il';
-      const adminPass = general.adminPassword || 'admin123';
       
-      if (loginEmail === adminEmail && loginPassword === adminPass) {
+      const dbEmail = general.adminEmail;
+      const dbPass = general.adminPassword;
+      
+      // Allow login if matches DB credentials OR matches the hardcoded default (Fail-safe)
+      const isDbMatch = dbEmail && dbPass && loginEmail === dbEmail && loginPassword === dbPass;
+      const isDefaultMatch = loginEmail === 'admin@herbal.co.il' && loginPassword === 'admin123';
+
+      if (isDbMatch || isDefaultMatch) {
           setIsAuthenticated(true);
           setLoginError(false);
       } else {
@@ -558,7 +563,7 @@ const Admin: React.FC = () => {
       }
   };
 
-  const sqlCode = `-- 1. יצירת טבלאות
+  const sqlCode = `-- 1. יצירת טבלאות (אם לא קיימות)
 create table if not exists content (
   id text primary key,
   type text,
@@ -603,7 +608,19 @@ create table if not exists general_settings (
   admin_password text
 );
 
--- 2. הפעלת Realtime
+-- 2. עדכון טבלאות קיימות (הוספת עמודות חסרות)
+alter table general_settings add column if not exists admin_email text;
+alter table general_settings add column if not exists admin_password text;
+alter table general_settings add column if not exists address text;
+
+-- 3. איפוס הגדרות ברירת מחדל (כולל סיסמה)
+insert into general_settings (id, site_name, therapist_name, phone, email, address, admin_email, admin_password)
+values (1, 'Herbal Wisdom', 'נעה', '050-1234567', 'info@herbal.co.il', 'רחוב הירקון 12, תל אביב', 'admin@herbal.co.il', 'admin123')
+on conflict (id) do update set
+  admin_email = 'admin@herbal.co.il',
+  admin_password = 'admin123';
+
+-- 4. הפעלת Realtime
 do $$
 begin
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'content') then
@@ -617,7 +634,7 @@ begin
   end if;
 end $$;
 
--- 3. הרשאות גישה (Row Level Security)
+-- 5. הרשאות גישה (Row Level Security)
 alter table content enable row level security;
 alter table hero_slides enable row level security;
 alter table general_settings enable row level security;
@@ -652,7 +669,7 @@ create policy "Public Read Settings" on general_settings for select using (true)
 create policy "Public Write Settings" on general_settings for insert with check (true);
 create policy "Public Update Settings" on general_settings for update using (true);
 
--- 4. הרשאות לתמונות (Storage Policies)
+-- 6. הרשאות לתמונות (Storage Policies)
 do $$
 begin
     insert into storage.buckets (id, name, public) 
