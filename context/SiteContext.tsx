@@ -232,30 +232,56 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsplash_key: settings.unsplashKey,
       admin_notes: settings.adminNotes
     };
-    await supabase.from('general_settings').upsert(dbSettings);
+    const { error } = await supabase.from('general_settings').upsert(dbSettings);
+    if (error) throw error;
   };
 
   const addContent = async (item: ContentItem) => {
+    // Optimistic Update
     setContent(prev => [item, ...prev]);
+    
     const dbItem = mapContentToDb(item);
-    await supabase.from('content').insert(dbItem);
+    const { error } = await supabase.from('content').insert(dbItem);
+    
+    if (error) {
+        // Rollback on error
+        setContent(prev => prev.filter(c => c.id !== item.id));
+        throw error;
+    }
   };
 
   const updateContent = async (item: ContentItem) => {
+     // Optimistic Update
+     const oldContent = [...content];
      setContent(prev => prev.map(c => c.id === item.id ? item : c));
+     
      const dbItem = mapContentToDb(item);
-     await supabase.from('content').update(dbItem).eq('id', item.id);
+     const { error } = await supabase.from('content').update(dbItem).eq('id', item.id);
+     
+     if (error) {
+         // Rollback
+         setContent(oldContent);
+         throw error;
+     }
   };
 
   const deleteContent = async (id: string) => {
+    // Optimistic Update
+    const oldContent = [...content];
     setContent(prev => prev.filter(c => c.id !== id));
-    await supabase.from('content').delete().eq('id', id);
+    
+    const { error } = await supabase.from('content').delete().eq('id', id);
+    if (error) {
+        // Rollback
+        setContent(oldContent);
+        throw error;
+    }
   };
 
   // --- Slides Actions ---
   const addSlide = async (slide: Slide) => {
       setSlides(prev => [...prev, slide]);
-      await supabase.from('hero_slides').insert({
+      const { error } = await supabase.from('hero_slides').insert({
           id: slide.id,
           title: slide.title,
           subtitle: slide.subtitle,
@@ -264,11 +290,12 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
           is_active: slide.active,
           display_order: slide.order
       });
+      if (error) throw error;
   };
 
   const updateSlide = async (slide: Slide) => {
       setSlides(prev => prev.map(s => s.id === slide.id ? slide : s));
-      await supabase.from('hero_slides').update({
+      const { error } = await supabase.from('hero_slides').update({
           title: slide.title,
           subtitle: slide.subtitle,
           text: slide.text,
@@ -276,11 +303,13 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
           is_active: slide.active,
           display_order: slide.order
       }).eq('id', slide.id);
+      if (error) throw error;
   };
 
   const deleteSlide = async (id: string) => {
       setSlides(prev => prev.filter(s => s.id !== id));
-      await supabase.from('hero_slides').delete().eq('id', id);
+      const { error } = await supabase.from('hero_slides').delete().eq('id', id);
+      if (error) throw error;
   };
 
   // --- AI & Images ---

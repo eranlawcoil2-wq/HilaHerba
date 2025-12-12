@@ -56,8 +56,8 @@ const Admin: React.FC = () => {
     try {
         await updateGeneral(generalForm);
         alert('הגדרות נשמרו בהצלחה!');
-    } catch (error) {
-        showError('שגיאה בשמירה. וודא שהאתר מחובר למסד הנתונים ושביצעת את שלב ה-SQL.');
+    } catch (error: any) {
+        showError('שגיאה בשמירה:\n' + (error.message || error.toString()) + '\n\nוודא שהאתר מחובר למסד הנתונים ושביצעת את שלב ה-SQL.');
     }
   };
 
@@ -139,8 +139,8 @@ const Admin: React.FC = () => {
         }
         setIsEditingContent(false);
         setEditingItem(null);
-    } catch (e) {
-        showError('שגיאה בשמירה. וודא שהרשאות ה-SQL הופעלו ב-Supabase.');
+    } catch (e: any) {
+        showError('שגיאה בשמירה:\n' + (e.message || e.toString()) + '\n\nוודא שהרשאות ה-SQL הופעלו ב-Supabase.');
     }
   };
 
@@ -157,17 +157,21 @@ const Admin: React.FC = () => {
           }
           setIsEditingSlide(false);
           setEditingSlide(null);
-      } catch (e) {
-          showError('שגיאה בשמירה. וודא שהרשאות ה-SQL הופעלו.');
+      } catch (e: any) {
+          showError('שגיאה בשמירה:\n' + (e.message || e.toString()));
       }
   };
 
   const handleDeleteContent = (id: string) => {
-    if (confirm('האם אתה בטוח?')) deleteContent(id);
+    if (confirm('האם אתה בטוח?')) {
+        deleteContent(id).catch(e => showError('שגיאה במחיקה: ' + e.message));
+    }
   };
 
   const handleDeleteSlide = (id: string) => {
-      if (confirm('למחוק שקופית זו?')) deleteSlide(id);
+      if (confirm('למחוק שקופית זו?')) {
+          deleteSlide(id).catch(e => showError('שגיאה במחיקה: ' + e.message));
+      }
   };
 
   // --- AI Logic ---
@@ -214,77 +218,140 @@ const Admin: React.FC = () => {
       if (!editingItem || !general.geminiKey) return showError("חסר מפתח AI או פריט לעריכה. וודא שהמפתח נשמר בטאב 'חיבורים'.");
       setAiLoading(true);
       
-      let prompt = "";
+      let subject = editingItem.type === 'plant' ? (editingItem as Plant).hebrewName : (editingItem as Article).title;
+      // Removed unused userPrompt variable
+
+      // If no name is provided, ask the user or pick random
+      if (!subject) {
+          const userSubject = prompt("לא הוזן שם או כותרת. על מה תרצה שה-AI יכתוב?\n(השאר ריק כדי שה-AI יבחר נושא מעניין באופן אקראי)");
+          if (userSubject === null) {
+              setAiLoading(false);
+              return; // User cancelled
+          }
+          subject = userSubject.trim() || "random_popular_topic";
+      }
+      
+      let aiPrompt = "";
       
       // --- PLANT PROMPT ---
       if (editingItem.type === 'plant') {
-          const plantName = (editingItem as Plant).hebrewName || "Unnamed Plant";
-          prompt = `
-            You are a world-renowned expert in Clinical Herbal Medicine (Herbalist) with 30 years of experience.
-            Your task is to write a comprehensive, deep, and highly professional profile for the medicinal plant: "${plantName}".
+          aiPrompt = `
+            You are a world-renowned expert in Clinical Herbal Medicine (Herbalist).
+            Task: Create a FULL profile for the medicinal plant: "${subject}".
             
-            You must return a JSON array of tab objects. Each object has "title" and "content".
-            The content must be in Hebrew, formatted as clean text with newlines (HTML friendly, but no heavy tags).
-            
-            Required Tabs (Content must be very detailed, not superficial):
-            1. "פעילות רפואית ומנגנון" (Clinical Actions & Mechanism): Explain exactly how it works on the body, active constituents, and pharmacology.
-            2. "שימושים קליניים" (Clinical Uses): Detailed list of conditions it treats, specifying acute vs chronic.
-            3. "בטיחות והתוויות נגד" (Safety & Contraindications): Pregnancy, lactation, drug interactions (CYP450), and side effects. Be very specific.
-            4. "מינון ואופן שימוש" (Dosage & Preparation): Tincture ratios (1:3, 1:5), decoction vs infusion, specific dosages.
-            5. "פולקלור ומסורת" (Tradition): Historical uses in TCM, Ayurveda, or Western herbalism.
-            
-            Output strictly valid JSON: [{"title": "...", "content": "..."}]
-            Do not include markdown ticks. Just the JSON array.
+            If the subject is "random_popular_topic", choose a popular medicinal plant that is commonly used.
+
+            Output strictly a valid JSON object with these fields:
+            {
+                "hebrewName": "The plant name in Hebrew",
+                "latinName": "Scientific/Latin name",
+                "description": "A short, professional description (2-3 sentences) in Hebrew",
+                "imageSearchQuery": "A precise and simple English search term to find a photo of this plant on Unsplash (e.g. 'Chamomile flower', 'Ginger root')",
+                "benefits": ["tag1", "tag2", "tag3", "tag4"],
+                "tabs": [
+                    { "title": "Short Title (1-2 words)", "content": "Full detailed content in Hebrew..." }
+                ]
+            }
+
+            Rules:
+            1. "benefits": Provide EXACTLY 4 highly relevant short tags/benefits in Hebrew.
+            2. "tabs": Create between 3 to 5 tabs.
+            3. Tab Titles: Must be very short (e.g., "פעילות", "שימושים", "בטיחות", "מינון"). Do not use long titles.
+            4. Content: Professional, accurate, and safe.
+            5. Output ONLY the JSON. No markdown ticks.
           `;
       } 
       // --- ARTICLE / CASE STUDY PROMPT ---
       else {
-          const title = (editingItem as Article).title || "Untitled Article";
           const type = editingItem.type === 'case_study' ? 'Case Study' : 'Professional Article';
-          prompt = `
+          aiPrompt = `
             You are a senior editor of a prestigious Herbal Medicine Journal.
-            Write a deep, long-form, and professional ${type} titled: "${title}".
+            Task: Write a full ${type} about: "${subject}".
             
-            You must return a JSON array of tab objects. Each object has "title" and "content".
-            The content must be in Hebrew.
-            
-            If it is a Case Study, suggested tabs: "רקע המטופל", "אבחנה (מסורתית/מערבית)", "פרוטוקול הטיפול", "מעקב ותוצאות", "דיון קליני".
-            If it is an Article, suggested tabs: "מבוא", "פיזיולוגיה/פתולוגיה", "הגישה הטיפולית", "צמחים רלוונטיים", "מחקרים ותוצאות", "סיכום".
-            
-            Write extensive content for each tab. Demonstrate deep understanding of pathology and herbal actions.
-            Output strictly valid JSON: [{"title": "...", "content": "..."}]
+            If the subject is "random_popular_topic", choose an interesting professional topic or common clinical case.
+
+            Output strictly a valid JSON object with these fields:
+            {
+                "title": "A catchy, professional title in Hebrew",
+                "summary": "A short summary/abstract (2-3 sentences) in Hebrew",
+                "imageSearchQuery": "A precise and simple English search term to find a photo related to this topic on Unsplash (e.g. 'Healthy food', 'Stressed woman', 'Herbal tea')",
+                "tags": ["tag1", "tag2", "tag3", "tag4"],
+                "tabs": [
+                    { "title": "Short Title (1-2 words)", "content": "Full detailed content in Hebrew..." }
+                ]
+            }
+
+            Rules:
+            1. "tags": Provide EXACTLY 4 relevant tags in Hebrew.
+            2. "tabs": Create between 3 to 5 tabs.
+            3. Tab Titles: Must be very short (e.g., "מבוא", "אבחנה", "טיפול", "דיון").
+            4. Content: Deep, professional, and educational.
+            5. Output ONLY the JSON. No markdown ticks.
           `;
       }
       
       let rawRes = ""; // Capture raw output for debugging
 
       try {
-          const res = await generateAIContent(prompt, 'json');
+          const res = await generateAIContent(aiPrompt, 'json');
           rawRes = res;
           
           // Robust JSON extraction
           let jsonString = res.replace(/```json/g, '').replace(/```/g, '').trim();
           
-          // Find the array brackets if there is extra text
-          const firstBracket = jsonString.indexOf('[');
-          const lastBracket = jsonString.lastIndexOf(']');
+          // Find the object braces
+          const firstBrace = jsonString.indexOf('{');
+          const lastBrace = jsonString.lastIndexOf('}');
           
-          if (firstBracket !== -1 && lastBracket !== -1) {
-              jsonString = jsonString.substring(firstBracket, lastBracket + 1);
+          if (firstBrace !== -1 && lastBrace !== -1) {
+              jsonString = jsonString.substring(firstBrace, lastBrace + 1);
           }
           
-          const tabs = JSON.parse(jsonString);
+          const aiData = JSON.parse(jsonString);
           
-          // Generate IDs for new tabs
-          const mappedTabs = tabs.map((t: any, i: number) => ({
+          // Map AI Data back to the Item State
+          const newTabs = (aiData.tabs || []).map((t: any, i: number) => ({
               id: Date.now().toString() + i,
               title: t.title,
               content: t.content
           }));
-          
-          setEditingItem(prev => ({ ...prev, tabs: mappedTabs }));
+
+          // 1. UPDATE TEXT CONTENT
+          setEditingItem(prev => {
+              if (!prev) return null;
+              const newItem = { ...prev };
+              
+              if (prev.type === 'plant') {
+                  (newItem as Plant).hebrewName = aiData.hebrewName || (prev as Plant).hebrewName;
+                  (newItem as Plant).latinName = aiData.latinName || (prev as Plant).latinName;
+                  (newItem as Plant).description = aiData.description || (prev as Plant).description;
+                  (newItem as Plant).benefits = aiData.benefits || (prev as Plant).benefits || [];
+              } else {
+                  (newItem as Article).title = aiData.title || (prev as Article).title;
+                  (newItem as Article).summary = aiData.summary || (prev as Article).summary;
+                  (newItem as Article).tags = aiData.tags || (prev as Article).tags || [];
+              }
+              
+              newItem.tabs = newTabs;
+              return newItem;
+          });
+
+          // 2. AUTO-SELECT IMAGE (If Query Exists and Unsplash Key is set)
+          if (aiData.imageSearchQuery && general.unsplashKey) {
+              try {
+                  const images = await searchImages(aiData.imageSearchQuery);
+                  if (images && images.length > 0) {
+                      const bestImage = images[0].urls.regular;
+                      setEditingItem(prev => prev ? ({ ...prev, imageUrl: bestImage }) : null);
+                  }
+              } catch (imgErr) {
+                  console.warn("Auto image fetch failed:", imgErr);
+                  // Non-blocking error, user can still manually add image
+              }
+          }
+
       } catch (e: any) {
-          console.error("AI Auto Tabs Error:", e);
+          console.error("AI Auto Content Error:", e);
           let errorMsg = e.message || e.toString();
           
           // Custom friendly error messages
