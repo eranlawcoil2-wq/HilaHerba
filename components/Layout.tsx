@@ -170,9 +170,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="flex items-center gap-3">
               <span>© {new Date().getFullYear()} {general.siteName}. כל הזכויות שמורות.</span>
               
-              {/* ADMIN LINK - Only visible on Contact page */}
+              {/* ADMIN LINK - Only visible on Contact page - Updated visibility */}
               {location.pathname === '/contact' && (
-                  <Link to="/admin" className="text-gray-500 hover:text-white transition-colors p-2" aria-label="כניסה לניהול">
+                  <Link to="/admin" className="text-white/30 hover:text-white transition-colors p-2" aria-label="כניסה לניהול">
                       <Lock size={16} />
                   </Link>
               )}

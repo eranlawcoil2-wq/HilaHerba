@@ -130,7 +130,7 @@ const Admin: React.FC = () => {
         await updateGeneral(generalForm);
         showSuccess('הגדרות נשמרו בהצלחה!');
     } catch (error: any) {
-        showError('שגיאה בשמירה:\n' + (error.message || error.toString()) + '\n\nוודא שהאתר מחובר למסד הנתונים ושביצעת את שלב ה-SQL העדכני.');
+        showError('שגיאה בשמירה:\n' + (error.message || error.toString()) + '\n\nוודא שהאתר מחובר למסד הנתונים ושביצעת את שלב ה-SQL העדכני (כולל פקודת רענון ה-Cache).');
     }
   };
 
@@ -612,8 +612,7 @@ alter table general_settings add column if not exists admin_email text;
 alter table general_settings add column if not exists admin_password text;
 alter table general_settings add column if not exists address text;
 
--- 3. איפוס הגדרות ברירת מחדל (חובה!)
--- פעולה זו תוודא שקיים משתמש עם סיסמה 
+-- 3. איפוס הגדרות ברירת מחדל
 insert into general_settings (id, site_name, therapist_name, phone, email, address, admin_email, admin_password)
 values (1, 'Herbal Wisdom', 'נעה', '050-1234567', 'info@herbal.co.il', 'רחוב הירקון 12, תל אביב', 'admin@herbal.co.il', 'admin123')
 on conflict (id) do update set
@@ -639,7 +638,6 @@ alter table content enable row level security;
 alter table hero_slides enable row level security;
 alter table general_settings enable row level security;
 
--- מחיקת הרשאות ישנות
 drop policy if exists "Public Read Content" on content;
 drop policy if exists "Public Write Content" on content;
 drop policy if exists "Public Update Content" on content;
@@ -654,7 +652,6 @@ drop policy if exists "Public Read Settings" on general_settings;
 drop policy if exists "Public Write Settings" on general_settings;
 drop policy if exists "Public Update Settings" on general_settings;
 
--- יצירת הרשאות חדשות
 create policy "Public Read Content" on content for select using (true);
 create policy "Public Write Content" on content for insert with check (true);
 create policy "Public Update Content" on content for update using (true);
@@ -669,7 +666,7 @@ create policy "Public Read Settings" on general_settings for select using (true)
 create policy "Public Write Settings" on general_settings for insert with check (true);
 create policy "Public Update Settings" on general_settings for update using (true);
 
--- 6. הרשאות לתמונות (Storage Policies)
+-- 6. הרשאות לתמונות
 do $$
 begin
     insert into storage.buckets (id, name, public) 
@@ -682,6 +679,9 @@ drop policy if exists "Public Images Upload" on storage.objects;
 
 create policy "Public Images Read" on storage.objects for select using ( bucket_id = 'public-images' );
 create policy "Public Images Upload" on storage.objects for insert with check ( bucket_id = 'public-images' );
+
+-- 7. רענון Cache חובה! (מתקן את שגיאת ה-Schema Cache)
+NOTIFY pgrst, 'reload config';
 `;
 
   const copyToClipboard = () => {
