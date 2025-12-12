@@ -61,6 +61,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const tabs = dbItem.tabs || [];
     
     // Backward compatibility for old rows without 'tabs' column
+    // We only READ these if they exist to migrate data, but we don't write back to them
     if (tabs.length === 0 && (dbItem.usage || dbItem.precautions || dbItem.content)) {
         if (dbItem.usage) tabs.push({ id: 'legacy-1', title: 'שימוש', content: dbItem.usage });
         if (dbItem.precautions) tabs.push({ id: 'legacy-2', title: 'בטיחות', content: dbItem.precautions });
@@ -109,10 +110,8 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         latin_name: item.latinName,
         description: item.description,
         benefits: item.benefits,
-        category: item.category,
-        // Reset legacy fields to null if migrating
-        usage: null,
-        precautions: null
+        category: item.category
+        // REMOVED: usage, precautions - these columns do not exist anymore
       };
     } else {
       return {
@@ -120,9 +119,8 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: item.title,
         summary: item.summary,
         date: item.date,
-        tags: item.tags,
-        // Reset legacy fields
-        content: null
+        tags: item.tags
+        // REMOVED: content - this column does not exist anymore
       };
     }
   };
