@@ -166,6 +166,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
           geminiKey: settingsData.gemini_key || '',
           unsplashKey: settingsData.unsplash_key || '',
           adminNotes: settingsData.admin_notes || '',
+          // IMPORTANT: Fallback to default if DB is null
           adminEmail: settingsData.admin_email || 'admin@herbal.co.il',
           adminPassword: settingsData.admin_password || 'admin123',
         });

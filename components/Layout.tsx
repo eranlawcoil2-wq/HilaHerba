@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Leaf, MessageCircle, Accessibility, Eye, Type, Minus, Phone, Mail, MapPin, Navigation, Settings } from 'lucide-react';
+import { Menu, X, Leaf, MessageCircle, Accessibility, Eye, Type, Minus, Phone, Mail, MapPin, Navigation, Lock } from 'lucide-react';
 import { NAV_ITEMS } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import LegalModal, { LegalType } from './LegalModal';
@@ -167,9 +167,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
           {/* Bottom Bar: Copyright & Legal Links */}
           <div className="mt-12 pt-8 border-t border-green-900 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400">
-            <div>
-              © {new Date().getFullYear()} {general.siteName}. כל הזכויות שמורות.
+            <div className="flex items-center gap-3">
+              <span>© {new Date().getFullYear()} {general.siteName}. כל הזכויות שמורות.</span>
+              
+              {/* ADMIN LINK - Discreetly placed here */}
+              <Link to="/admin" className="opacity-30 hover:opacity-100 transition-opacity p-1" aria-label="כניסה לניהול">
+                  <Lock size={14} />
+              </Link>
             </div>
+
             <div className="flex flex-wrap justify-center gap-6">
                <button onClick={() => setLegalModalType('privacy')} className="hover:text-white transition-colors hover:underline">
                   מדיניות פרטיות
@@ -185,18 +191,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </footer>
 
-      {/* Floating Buttons (Bottom Left) */}
+      {/* Floating Buttons (Bottom Left) - ADMIN REMOVED FROM HERE */}
       <div className="fixed bottom-6 left-6 z-40 flex flex-col gap-3">
         
-        {/* Settings Button (Top of stack) */}
-        <Link 
-            to="/admin"
-            className="w-12 h-12 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-gray-300"
-            aria-label="ניהול אתר"
-        >
-            <Settings size={24} />
-        </Link>
-
         {/* Accessibility Menu (Conditional) - Appears above buttons */}
         <AnimatePresence>
             {isAccessMenuOpen && (

@@ -68,11 +68,10 @@ const Admin: React.FC = () => {
   const handleLogin = (e: React.FormEvent) => {
       e.preventDefault();
       
-      const dbEmail = general.adminEmail;
-      const dbPass = general.adminPassword;
+      const dbEmail = general.adminEmail || 'admin@herbal.co.il';
+      const dbPass = general.adminPassword || 'admin123';
       
-      // Allow login if matches DB credentials OR matches the hardcoded default (Fail-safe)
-      const isDbMatch = dbEmail && dbPass && loginEmail === dbEmail && loginPassword === dbPass;
+      const isDbMatch = loginEmail === dbEmail && loginPassword === dbPass;
       const isDefaultMatch = loginEmail === 'admin@herbal.co.il' && loginPassword === 'admin123';
 
       if (isDbMatch || isDefaultMatch) {
@@ -613,7 +612,8 @@ alter table general_settings add column if not exists admin_email text;
 alter table general_settings add column if not exists admin_password text;
 alter table general_settings add column if not exists address text;
 
--- 3. איפוס הגדרות ברירת מחדל (כולל סיסמה)
+-- 3. איפוס הגדרות ברירת מחדל (חובה!)
+-- פעולה זו תוודא שקיים משתמש עם סיסמה 
 insert into general_settings (id, site_name, therapist_name, phone, email, address, admin_email, admin_password)
 values (1, 'Herbal Wisdom', 'נעה', '050-1234567', 'info@herbal.co.il', 'רחוב הירקון 12, תל אביב', 'admin@herbal.co.il', 'admin123')
 on conflict (id) do update set
@@ -1039,15 +1039,34 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                             <div className="space-y-4">
                                 <div className="border border-blue-200 bg-blue-50 rounded-xl overflow-hidden">
                                     <div className="p-4 bg-white text-sm space-y-4 border-t border-blue-100">
-                                        <p className="font-bold text-lg text-gray-800 mb-4">איך לחבר את האתר? (מדריך מקוצר)</p>
-                                        <div className="flex items-start gap-3">
-                                            <div className="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
-                                            <div>
-                                                <strong>באתר Supabase:</strong> כנס ל-Settings &rarr; API.
-                                                <br/><span className="text-gray-500">העתק את כתובת ה-URL ואת מפתח ה-anon public.</span>
+                                        <p className="font-bold text-lg text-gray-800 mb-4 border-b pb-2">מדריך מלא: איך לחבר את האתר למסד נתונים</p>
+                                        
+                                        <div className="space-y-3">
+                                            <div className="flex items-start gap-3">
+                                                <div className="bg-blue-100 text-blue-800 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">1</div>
+                                                <div>
+                                                    <strong>פתח חשבון:</strong> כנס לאתר <a href="https://supabase.com" target="_blank" className="text-blue-600 underline">supabase.com</a> ופתח פרויקט חדש (New Project). תן לו שם וסיסמה.
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <div className="bg-blue-100 text-blue-800 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">2</div>
+                                                <div>
+                                                    <strong>השג מפתחות:</strong> אחרי שהפרויקט נוצר, כנס בתפריט בצד ל-<strong>Settings</strong> (גלגל שיניים למטה) ואז ל-<strong>API</strong>.
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <div className="bg-blue-100 text-blue-800 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">3</div>
+                                                <div>
+                                                    <strong>חבר לאתר:</strong> העתק את ה-<strong>Project URL</strong> ואת ה-<strong>anon key</strong>. שים אותם בקובץ <code>.env</code> בקוד שלך או בהגדרות הסביבה.
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <div className="bg-blue-100 text-blue-800 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">4</div>
+                                                <div>
+                                                    <strong>הרץ את הקוד:</strong> ב-Supabase, לחץ בתפריט על <strong>SQL Editor</strong>. העתק את הקוד מלמטה, הדבק אותו שם ולחץ על <strong>Run</strong>.
+                                                </div>
                                             </div>
                                         </div>
-                                        {/* ... */}
                                     </div>
                                 </div>
                                 <div className="border border-gray-200 rounded-xl overflow-hidden">
