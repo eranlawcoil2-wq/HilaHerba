@@ -170,10 +170,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="flex items-center gap-3">
               <span>© {new Date().getFullYear()} {general.siteName}. כל הזכויות שמורות.</span>
               
-              {/* ADMIN LINK - Discreetly placed here */}
-              <Link to="/admin" className="opacity-30 hover:opacity-100 transition-opacity p-1" aria-label="כניסה לניהול">
-                  <Lock size={14} />
-              </Link>
+              {/* ADMIN LINK - Only visible on Contact page */}
+              {location.pathname === '/contact' && (
+                  <Link to="/admin" className="text-gray-500 hover:text-white transition-colors p-2" aria-label="כניסה לניהול">
+                      <Lock size={16} />
+                  </Link>
+              )}
             </div>
 
             <div className="flex flex-wrap justify-center gap-6">
@@ -191,7 +193,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </footer>
 
-      {/* Floating Buttons (Bottom Left) - ADMIN REMOVED FROM HERE */}
+      {/* Floating Buttons (Bottom Left) */}
       <div className="fixed bottom-6 left-6 z-40 flex flex-col gap-3">
         
         {/* Accessibility Menu (Conditional) - Appears above buttons */}
