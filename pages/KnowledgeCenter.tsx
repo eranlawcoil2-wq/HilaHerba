@@ -7,6 +7,7 @@ import PlantModal from '../components/PlantModal';
 import ArticleModal from '../components/ArticleModal';
 import RecipeModal from '../components/RecipeModal';
 import { useSite } from '../context/SiteContext';
+import SEO from '../components/SEO';
 
 const KnowledgeCenter: React.FC = () => {
   const { content: allContent } = useSite();
@@ -170,6 +171,10 @@ const KnowledgeCenter: React.FC = () => {
 
   return (
     <div className="bg-[#FAF9F6] min-h-screen pb-20 relative">
+      <SEO 
+        title="מרכז הידע" 
+        description="מאגר מידע מקיף הכולל אינדקס צמחי מרפא, מאמרים מקצועיים, מתכוני בריאות ומקרי אירוע טיפוליים." 
+      />
       
       {/* Header Background Only */}
       <div 

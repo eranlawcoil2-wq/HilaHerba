@@ -4,6 +4,7 @@ import { X, Calendar, Tag, User, Sprout, FileText } from 'lucide-react';
 import { Article, ContentItem } from '../types';
 import { TYPE_LABELS } from '../constants';
 import { useSite } from '../context/SiteContext';
+import SEO from './SEO';
 
 interface ArticleModalProps {
   article: Article;
@@ -28,8 +29,29 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
     // Ensure tabs exist
     const tabs = article.tabs && article.tabs.length > 0 ? article.tabs : [];
 
+    // JSON-LD for Article
+    const articleSchema = {
+        "@type": "Article",
+        "headline": article.title,
+        "description": article.summary,
+        "image": article.imageUrl,
+        "datePublished": article.date,
+        "author": {
+            "@type": "Organization",
+            "name": "Herbal Wisdom"
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <SEO 
+                title={article.title}
+                description={article.summary}
+                image={article.imageUrl}
+                type="article"
+                schema={articleSchema}
+            />
+
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

@@ -4,6 +4,7 @@ import { X, Calendar, User, Utensils, ChefHat, Clock, Flame } from 'lucide-react
 import { Recipe, ContentItem } from '../types';
 import { TYPE_LABELS } from '../constants';
 import { useSite } from '../context/SiteContext';
+import SEO from './SEO';
 
 interface RecipeModalProps {
   recipe: Recipe;
@@ -28,8 +29,26 @@ const RecipeModal: React.FC<RecipeModalProps> = ({ recipe, onClose, onSwitchItem
     // Ensure tabs exist
     const tabs = recipe.tabs && recipe.tabs.length > 0 ? recipe.tabs : [];
 
+    // JSON-LD for Recipe
+    const recipeSchema = {
+        "@type": "Recipe",
+        "name": recipe.title,
+        "description": recipe.summary,
+        "image": recipe.imageUrl,
+        "datePublished": recipe.date,
+        "recipeCategory": "Health",
+        "keywords": recipe.tags.join(', ')
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <SEO 
+                title={recipe.title}
+                description={recipe.summary}
+                image={recipe.imageUrl}
+                schema={recipeSchema}
+            />
+
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

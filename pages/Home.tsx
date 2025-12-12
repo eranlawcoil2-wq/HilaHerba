@@ -9,6 +9,7 @@ import PlantModal from '../components/PlantModal';
 import ArticleModal from '../components/ArticleModal';
 import RecipeModal from '../components/RecipeModal';
 import { useSite } from '../context/SiteContext';
+import SEO from '../components/SEO';
 
 const Home: React.FC = () => {
   // Use Dynamic Data
@@ -167,6 +168,11 @@ const Home: React.FC = () => {
 
   return (
     <div className="pb-20 bg-[#FAF9F6]">
+      <SEO 
+        title="דף הבית"
+        description={`${general.aboutShort} - מומחית לצמחי מרפא, תזונה טבעית ורפואה משלימה.`}
+      />
+      
       <Hero />
 
       {/* About Section */}

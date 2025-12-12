@@ -4,6 +4,7 @@ import { X, Leaf, BookOpen, Sprout, FileText, Calendar } from 'lucide-react';
 import { Plant, ContentItem } from '../types';
 import { TYPE_LABELS } from '../constants';
 import { useSite } from '../context/SiteContext';
+import SEO from './SEO';
 
 interface PlantModalProps {
   plant: Plant;
@@ -29,8 +30,25 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
     // Ensure we have tabs, if empty create default
     const tabs = plant.tabs && plant.tabs.length > 0 ? plant.tabs : [];
 
+    // JSON-LD for Plant/Product
+    const plantSchema = {
+        "@type": "Product",
+        "name": plant.hebrewName,
+        "alternateName": plant.latinName,
+        "description": plant.description,
+        "image": plant.imageUrl,
+        "category": plant.category
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <SEO 
+                title={plant.hebrewName}
+                description={`${plant.hebrewName} (${plant.latinName}) - ${plant.description}`}
+                image={plant.imageUrl}
+                schema={plantSchema}
+            />
+
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

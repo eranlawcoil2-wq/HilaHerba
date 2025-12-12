@@ -2,12 +2,47 @@ import React from 'react';
 import { Mail, Phone, MapPin, Send, Video } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSite } from '../context/SiteContext';
+import SEO from '../components/SEO';
 
 const Contact: React.FC = () => {
   const { general } = useSite();
 
+  const businessSchema = {
+    "@type": "LocalBusiness",
+    "name": general.siteName,
+    "image": "https://picsum.photos/seed/portrait/600/800", // Using portrait from the page
+    "telephone": general.phone,
+    "email": general.email,
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": general.address,
+      "addressLocality": "Tel Aviv",
+      "addressCountry": "IL"
+    },
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday"
+        ],
+        "opens": "09:00",
+        "closes": "18:00"
+      }
+    ],
+    "priceRange": "$$"
+  };
+
   return (
     <div className="bg-[#FAF9F6] min-h-screen">
+      <SEO 
+        title="צור קשר" 
+        description={`צרו קשר עם ${general.therapistName} לתיאום ייעוץ אישי בצמחי מרפא. הקליניקה נמצאת ב${general.address}.`}
+        schema={businessSchema}
+      />
       
       {/* About Section (Top) */}
       <section className="pt-32 pb-16 bg-[#1a2e1a] text-white relative overflow-hidden rounded-b-[3rem]">
