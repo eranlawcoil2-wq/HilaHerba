@@ -1,3 +1,4 @@
+
 import { NavItem } from './types';
 
 export const NAV_ITEMS: NavItem[] = [
@@ -27,5 +28,6 @@ export const TYPE_LABELS: Record<string, string> = {
   all: 'הכל',
   plant: 'צמחי מרפא',
   article: 'מאמרים',
-  case_study: 'מקרי אירוע'
+  case_study: 'מקרי אירוע',
+  recipe: 'מתכונים'
 };

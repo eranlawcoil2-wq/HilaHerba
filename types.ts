@@ -1,3 +1,4 @@
+
 export interface ContentTab {
   id: string;
   title: string;
@@ -13,6 +14,7 @@ export interface Plant {
   category: 'relaxing' | 'digestive' | 'immune' | 'skin' | 'general';
   imageUrl: string;
   tabs: ContentTab[]; // Replaces fixed fields like usage/precautions
+  date?: string; // Added for "Last Updated" feature
 }
 
 export interface Article {
@@ -26,9 +28,21 @@ export interface Article {
   tabs: ContentTab[]; // Replaces fixed content field
 }
 
+export interface Recipe {
+  id: string;
+  title: string;
+  summary: string;
+  date: string;
+  imageUrl: string;
+  type: 'recipe';
+  tags: string[];
+  tabs: ContentTab[]; 
+}
+
 export type ContentItem = 
   | (Plant & { type: 'plant' }) 
-  | Article;
+  | Article
+  | Recipe;
 
 export interface Slide {
   id: string;

@@ -2,11 +2,12 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Hero from '../components/Hero';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Leaf, Search, X, Tag, Video, Sprout, FileText, BookOpen } from 'lucide-react';
-import { Plant, Article, ContentItem } from '../types';
+import { ChevronLeft, ChevronRight, Leaf, Search, X, Tag, Video, Sprout, FileText, BookOpen, Utensils } from 'lucide-react';
+import { Plant, Article, Recipe, ContentItem } from '../types';
 import { TYPE_LABELS } from '../constants';
 import PlantModal from '../components/PlantModal';
 import ArticleModal from '../components/ArticleModal';
+import RecipeModal from '../components/RecipeModal';
 import { useSite } from '../context/SiteContext';
 
 const Home: React.FC = () => {
@@ -26,6 +27,7 @@ const Home: React.FC = () => {
   // Modal States
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   // Constants
   const ITEMS_PER_PAGE = 8;
@@ -142,9 +144,12 @@ const Home: React.FC = () => {
       // Close existing
       setSelectedPlant(null);
       setSelectedArticle(null);
+      setSelectedRecipe(null);
 
       if (item.type === 'plant') {
           setSelectedPlant(item as Plant);
+      } else if (item.type === 'recipe') {
+          setSelectedRecipe(item as Recipe);
       } else {
           setSelectedArticle(item as Article);
       }
@@ -155,6 +160,7 @@ const Home: React.FC = () => {
           case 'plant': return { color: 'bg-[#1a2e1a]', icon: <Sprout size={12} />, label: 'צמח מרפא' };
           case 'article': return { color: 'bg-green-600', icon: <FileText size={12} />, label: 'מאמר' };
           case 'case_study': return { color: 'bg-blue-600', icon: <BookOpen size={12} />, label: 'מקרה אירוע' };
+          case 'recipe': return { color: 'bg-orange-600', icon: <Utensils size={12} />, label: 'מתכון' };
           default: return { color: 'bg-gray-500', icon: null, label: 'כללי' };
       }
   };
@@ -231,14 +237,14 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-7xl">
           <div className="mb-12">
              <h3 className="text-3xl font-bold text-[#1a2e1a] mb-2 text-center md:text-right">מרכז הידע</h3>
-             <p className="text-gray-500 text-center md:text-right">חיפוש בכל המאמרים, הצמחים ומקרי האירוע</p>
+             <p className="text-gray-500 text-center md:text-right">חיפוש בכל המאמרים, הצמחים, המתכונים ומקרי האירוע</p>
           </div>
 
           {/* Toolbar - Mobile: Stacked, Desktop: Row */}
           <div className="bg-white rounded-2xl shadow-xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 border border-gray-100 mb-12 relative z-20">
              {/* Line 1: Type Pills */}
              <div className="flex flex-wrap justify-center md:justify-start gap-2 w-full md:w-auto">
-                {['all', 'plant', 'article', 'case_study'].map(type => (
+                {['all', 'plant', 'article', 'recipe', 'case_study'].map(type => (
                     <button
                         key={type}
                         onClick={() => setSelectedType(type)}
@@ -341,7 +347,7 @@ const Home: React.FC = () => {
                          return (
                           <motion.div
                             key={(item.type === 'plant' ? 'p-' : 'a-') + item.id}
-                            layoutId={(item.type === 'plant' ? 'plant-' : 'article-') + item.id}
+                            layoutId={(item.type === 'plant' ? 'plant-' : item.type === 'recipe' ? 'recipe-' : 'article-') + item.id}
                             whileHover={{ y: -8, scale: 1.02 }}
                             onClick={() => handleCardClick(item)}
                             className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col h-[320px] border border-gray-100 group relative min-w-[40vw] md:min-w-0 snap-center"
@@ -428,6 +434,13 @@ const Home: React.FC = () => {
            <ArticleModal 
             article={selectedArticle} 
             onClose={() => setSelectedArticle(null)}
+            onSwitchItem={handleCardClick}
+           />
+        )}
+        {selectedRecipe && (
+           <RecipeModal 
+            recipe={selectedRecipe} 
+            onClose={() => setSelectedRecipe(null)}
             onSwitchItem={handleCardClick}
            />
         )}

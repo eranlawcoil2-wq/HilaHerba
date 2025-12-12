@@ -1,4 +1,5 @@
-import { Plant, Article, Slide } from '../types';
+
+import { Plant, Article, Slide, Recipe } from '../types';
 
 export const SLIDES: Slide[] = [
   {
@@ -50,7 +51,7 @@ export const PLANTS: Plant[] = [
   }
 ];
 
-export const ARTICLES: Article[] = [
+export const ARTICLES: (Article | Recipe)[] = [
   {
     id: '101',
     title: 'חיזוק המערכת החיסונית בחורף',
@@ -62,6 +63,19 @@ export const ARTICLES: Article[] = [
     tabs: [
         { id: 'a1', title: 'תוכן המאמר', content: 'כאן יופיע תוכן המאמר המלא...' },
         { id: 'a2', title: 'מקורות', content: 'רשימת מקורות ומחקרים...' }
+    ]
+  },
+  {
+    id: '201',
+    title: 'מרק כתום מחזק ומחמם',
+    summary: 'מתכון עשיר בויטמינים ומינרלים, מצוין לימים גשומים ולחיזוק הראייה והעור.',
+    date: '2024-01-10',
+    imageUrl: 'https://picsum.photos/seed/soup/800/600',
+    type: 'recipe',
+    tags: ['מתכונים', 'תזונה', 'חורף', 'טבעוני'],
+    tabs: [
+        { id: 'r1', title: 'מצרכים', content: '500 גרם דלעת\n2 גזרים\nבצל אחד\nשורש ג\'ינג\'ר טרי\nחלב קוקוס' },
+        { id: 'r2', title: 'אופן ההכנה', content: '1. מטגנים את הבצל...\n2. מוסיפים את הירקות...\n3. מבשלים עד ריכוך וטוחנים.' }
     ]
   }
 ];

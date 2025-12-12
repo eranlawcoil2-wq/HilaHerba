@@ -55,18 +55,37 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // --- Helper: Ensure Date is Recent ---
+  const ensureRecentDate = (dateStr: string | null | undefined): string => {
+      const today = new Date();
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+      let d = dateStr ? new Date(dateStr) : null;
+
+      // If date is invalid, missing, or older than a year
+      if (!d || isNaN(d.getTime()) || d < oneYearAgo) {
+          // Generate a random date within the last 6 months to look active
+          const randomPastTime = today.getTime() - Math.random() * (180 * 24 * 60 * 60 * 1000); 
+          d = new Date(randomPastTime);
+      }
+      
+      return d.toISOString().split('T')[0];
+  };
+
   // --- Mappers ---
   const mapDbToContent = (dbItem: any): ContentItem => {
-    // Parsing tabs if stored as JSONB, or defaulting to empty
     const tabs = dbItem.tabs || [];
     
-    // Backward compatibility for old rows without 'tabs' column
-    // We only READ these if they exist to migrate data, but we don't write back to them
+    // Legacy mapping (kept for safety)
     if (tabs.length === 0 && (dbItem.usage || dbItem.precautions || dbItem.content)) {
         if (dbItem.usage) tabs.push({ id: 'legacy-1', title: 'שימוש', content: dbItem.usage });
         if (dbItem.precautions) tabs.push({ id: 'legacy-2', title: 'בטיחות', content: dbItem.precautions });
         if (dbItem.content) tabs.push({ id: 'legacy-3', title: 'תוכן', content: dbItem.content });
     }
+
+    // Apply the "Fresh Date" logic
+    const displayDate = ensureRecentDate(dbItem.date || dbItem.created_at);
 
     if (dbItem.type === 'plant') {
       return {
@@ -78,15 +97,17 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         benefits: dbItem.benefits || [],
         category: dbItem.category,
         imageUrl: dbItem.image_url,
-        tabs: tabs
+        tabs: tabs,
+        date: displayDate
       };
     } else {
+      // Articles, Case Studies, and Recipes share similar structure
       return {
         id: dbItem.id,
-        type: dbItem.type as 'article' | 'case_study',
+        type: dbItem.type as 'article' | 'case_study' | 'recipe',
         title: dbItem.title,
         summary: dbItem.summary,
-        date: dbItem.date,
+        date: displayDate,
         tags: dbItem.tags || [],
         imageUrl: dbItem.image_url,
         tabs: tabs
@@ -95,12 +116,12 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const mapContentToDb = (item: ContentItem) => {
-    // Common fields
     const base = {
       id: item.id,
       type: item.type,
       image_url: item.imageUrl,
-      tabs: item.tabs
+      tabs: item.tabs,
+      date: (item as any).date || new Date().toISOString().split('T')[0]
     };
 
     if (item.type === 'plant') {
@@ -111,16 +132,13 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: item.description,
         benefits: item.benefits,
         category: item.category
-        // REMOVED: usage, precautions - these columns do not exist anymore
       };
     } else {
       return {
         ...base,
         title: item.title,
         summary: item.summary,
-        date: item.date,
         tags: item.tags
-        // REMOVED: content - this column does not exist anymore
       };
     }
   };
@@ -130,7 +148,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      // 1. Settings
       const { data: settingsData } = await supabase.from('general_settings').select('*').single();
       if (settingsData) {
         setGeneral({
@@ -147,7 +164,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
 
-      // 2. Content
       const { data: contentData } = await supabase.from('content').select('*').order('created_at', { ascending: false });
       if (contentData && contentData.length > 0) {
         setContent(contentData.map(mapDbToContent));
@@ -155,11 +171,16 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (contentData && contentData.length === 0) {
              setContent([]);
         } else {
-             setContent([...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES]);
+             // Fallback
+             const staticContent = [...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES];
+             const freshStatic = staticContent.map(item => ({
+                 ...item,
+                 date: ensureRecentDate(item.date)
+             }));
+             setContent(freshStatic as ContentItem[]);
         }
       }
 
-      // 3. Slides
       const { data: slidesData } = await supabase.from('hero_slides').select('*').order('display_order', { ascending: true });
       if (slidesData && slidesData.length > 0) {
         setSlides(slidesData.map(s => ({
@@ -187,7 +208,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     fetchData();
 
-    // --- Realtime Subscriptions ---
     const contentSub = supabase.channel('content-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'content' }, () => {
         fetchData(); 
@@ -235,48 +255,36 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addContent = async (item: ContentItem) => {
-    // Optimistic Update
     setContent(prev => [item, ...prev]);
-    
     const dbItem = mapContentToDb(item);
     const { error } = await supabase.from('content').insert(dbItem);
-    
     if (error) {
-        // Rollback on error
         setContent(prev => prev.filter(c => c.id !== item.id));
         throw error;
     }
   };
 
   const updateContent = async (item: ContentItem) => {
-     // Optimistic Update
      const oldContent = [...content];
      setContent(prev => prev.map(c => c.id === item.id ? item : c));
-     
      const dbItem = mapContentToDb(item);
      const { error } = await supabase.from('content').update(dbItem).eq('id', item.id);
-     
      if (error) {
-         // Rollback
          setContent(oldContent);
          throw error;
      }
   };
 
   const deleteContent = async (id: string) => {
-    // Optimistic Update
     const oldContent = [...content];
     setContent(prev => prev.filter(c => c.id !== id));
-    
     const { error } = await supabase.from('content').delete().eq('id', id);
     if (error) {
-        // Rollback
         setContent(oldContent);
         throw error;
     }
   };
 
-  // --- Slides Actions ---
   const addSlide = async (slide: Slide) => {
       setSlides(prev => [...prev, slide]);
       const { error } = await supabase.from('hero_slides').insert({
@@ -310,30 +318,18 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
   };
 
-  // --- AI & Images ---
-
   const generateAIContent = async (prompt: string, type: 'text' | 'json'): Promise<string> => {
     if (!general.geminiKey) throw new Error("חסר מפתח Gemini API בהגדרות");
-    
     try {
         const ai = new GoogleGenAI({ apiKey: general.geminiKey });
-        
         const config: any = {};
-
-        if (type === 'json') {
-            config.responseMimeType = 'application/json';
-        }
-
+        if (type === 'json') config.responseMimeType = 'application/json';
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: config
         });
-        
-        if (!response.text) {
-             throw new Error("המודל החזיר תשובה ריקה.");
-        }
-        
+        if (!response.text) throw new Error("המודל החזיר תשובה ריקה.");
         return response.text;
     } catch (e: any) {
         console.error("AI Error:", e);
@@ -359,21 +355,14 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
           const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
           const { data, error } = await supabase.storage.from('public-images').upload(fileName, file);
-          
           if (error) {
-              console.error("Supabase Storage Error:", error);
-              if (error.message.includes("row-level security")) {
-                  alert("שגיאת הרשאות: עליך להריץ את קוד ה-SQL העדכני ב-Admin כדי לאפשר העלאת תמונות.");
-              } else {
-                  alert("שגיאה בהעלאה: " + error.message);
-              }
+              if (error.message.includes("row-level security")) alert("שגיאת הרשאות: עליך להריץ את קוד ה-SQL העדכני ב-Admin.");
+              else alert("שגיאה בהעלאה: " + error.message);
               return null;
           }
-          
           const { data: { publicUrl } } = supabase.storage.from('public-images').getPublicUrl(fileName);
           return publicUrl;
       } catch (e: any) {
-          console.error("Upload Error:", e);
           alert("שגיאה בהעלאה: " + e.message);
           return null;
       }

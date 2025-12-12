@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, ChevronRight, ChevronLeft, Sprout, FileText, BookOpen, X, Check, Tag } from 'lucide-react';
-import { Plant, Article, ContentItem } from '../types';
+import { Search, Filter, ChevronRight, ChevronLeft, Sprout, FileText, BookOpen, X, Check, Tag, Utensils } from 'lucide-react';
+import { Plant, Article, Recipe, ContentItem } from '../types';
 import { TYPE_LABELS } from '../constants';
 import PlantModal from '../components/PlantModal';
 import ArticleModal from '../components/ArticleModal';
+import RecipeModal from '../components/RecipeModal';
 import { useSite } from '../context/SiteContext';
 
 const KnowledgeCenter: React.FC = () => {
@@ -22,6 +23,7 @@ const KnowledgeCenter: React.FC = () => {
   // Modal States
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   // Constants
   const ITEMS_PER_PAGE = 9;
@@ -144,9 +146,12 @@ const KnowledgeCenter: React.FC = () => {
        // Close existing
       setSelectedPlant(null);
       setSelectedArticle(null);
+      setSelectedRecipe(null);
       
       if (item.type === 'plant') {
           setSelectedPlant(item as Plant);
+      } else if (item.type === 'recipe') {
+          setSelectedRecipe(item as Recipe);
       } else {
           setSelectedArticle(item as Article);
       }
@@ -158,6 +163,7 @@ const KnowledgeCenter: React.FC = () => {
           case 'plant': return { color: 'bg-[#1a2e1a]', icon: <Sprout size={12} />, label: 'צמח מרפא' };
           case 'article': return { color: 'bg-green-600', icon: <FileText size={12} />, label: 'מאמר' };
           case 'case_study': return { color: 'bg-blue-600', icon: <BookOpen size={12} />, label: 'מקרה אירוע' };
+          case 'recipe': return { color: 'bg-orange-600', icon: <Utensils size={12} />, label: 'מתכון' };
           default: return { color: 'bg-gray-500', icon: null, label: 'כללי' };
       }
   };
@@ -186,7 +192,7 @@ const KnowledgeCenter: React.FC = () => {
         <div className="container mx-auto px-6 text-center relative z-10">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">מרכז הידע</h1>
           <p className="text-green-100 max-w-xl mx-auto text-lg font-light">
-            מאגר המידע השלם: צמחי מרפא, מאמרים מקצועיים ומקרי אירוע.
+            מאגר המידע השלם: צמחי מרפא, מאמרים מקצועיים, מתכונים ומקרי אירוע.
           </p>
         </div>
       </div>
@@ -198,7 +204,7 @@ const KnowledgeCenter: React.FC = () => {
             
             {/* Line 1: Type Pills */}
             <div className="flex flex-wrap justify-center md:justify-start gap-2 w-full md:w-auto">
-                {['all', 'plant', 'article', 'case_study'].map(type => (
+                {['all', 'plant', 'article', 'recipe', 'case_study'].map(type => (
                     <button
                         key={type}
                         onClick={() => setSelectedType(type)}
@@ -302,8 +308,8 @@ const KnowledgeCenter: React.FC = () => {
                         
                         return (
                         <motion.div
-                            key={(item.type === 'plant' ? 'p-' : 'a-') + item.id}
-                            layoutId={(item.type === 'plant' ? 'plant-' : 'article-') + item.id}
+                            key={(item.type === 'plant' ? 'p-' : item.type === 'recipe' ? 'r-' : 'a-') + item.id}
+                            layoutId={(item.type === 'plant' ? 'plant-' : item.type === 'recipe' ? 'recipe-' : 'article-') + item.id}
                             whileHover={{ y: -8 }}
                             onClick={() => handleCardClick(item)}
                             className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col h-[400px] border border-gray-100 group min-w-[40vw] md:min-w-0 snap-center"
@@ -412,6 +418,13 @@ const KnowledgeCenter: React.FC = () => {
           <ArticleModal 
             article={selectedArticle} 
             onClose={() => setSelectedArticle(null)}
+            onSwitchItem={handleCardClick}
+          />
+        )}
+        {selectedRecipe && (
+          <RecipeModal 
+            recipe={selectedRecipe} 
+            onClose={() => setSelectedRecipe(null)}
             onSwitchItem={handleCardClick}
           />
         )}

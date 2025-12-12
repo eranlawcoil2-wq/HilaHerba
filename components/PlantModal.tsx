@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Leaf, BookOpen, Sprout, FileText } from 'lucide-react';
+import { X, Leaf, BookOpen, Sprout, FileText, Calendar } from 'lucide-react';
 import { Plant, ContentItem } from '../types';
 import { TYPE_LABELS } from '../constants';
 import { useSite } from '../context/SiteContext';
@@ -81,7 +81,15 @@ const PlantModal: React.FC<PlantModalProps> = ({ plant, onClose, onSwitchItem })
                 <div className="w-full md:w-7/12 flex flex-col bg-[#FAF9F6] overflow-hidden relative rounded-t-3xl md:rounded-none -mt-4 md:mt-0 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-none">
                     
                     <div className="hidden md:block p-8 pb-0">
-                         <h2 className="text-4xl font-bold text-[#1a2e1a] mb-1">{plant.hebrewName}</h2>
+                         <div className="flex justify-between items-start mb-1">
+                             <h2 className="text-4xl font-bold text-[#1a2e1a]">{plant.hebrewName}</h2>
+                             {plant.date && (
+                                 <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full border border-gray-100">
+                                     <Calendar size={12} />
+                                     <span>עודכן לאחרונה: {plant.date}</span>
+                                 </div>
+                             )}
+                         </div>
                          <p className="text-gray-500 italic text-lg">{plant.latinName}</p>
                     </div>
 

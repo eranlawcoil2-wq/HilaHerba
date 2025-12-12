@@ -1,32 +1,32 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Tag, User, Sprout, FileText } from 'lucide-react';
-import { Article, ContentItem } from '../types';
+import { X, Calendar, User, Utensils, ChefHat, Clock, Flame } from 'lucide-react';
+import { Recipe, ContentItem } from '../types';
 import { TYPE_LABELS } from '../constants';
 import { useSite } from '../context/SiteContext';
 
-interface ArticleModalProps {
-  article: Article;
+interface RecipeModalProps {
+  recipe: Recipe;
   onClose: () => void;
   onSwitchItem?: (item: ContentItem) => void;
 }
 
-const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchItem }) => {
+const RecipeModal: React.FC<RecipeModalProps> = ({ recipe, onClose, onSwitchItem }) => {
     const [activeTabId, setActiveTabId] = useState<string>('summary');
     const { content: allContent } = useSite();
 
     const relatedItems: ContentItem[] = useMemo(() => {
         return allContent
             .filter(item => {
-                if (item.type !== 'plant' && item.id === article.id) return false;
+                if (item.id === recipe.id) return false;
                 const itemTags = item.type === 'plant' ? item.benefits : item.tags;
-                return article.tags.some(tag => itemTags.includes(tag));
+                return recipe.tags.some(tag => itemTags.includes(tag));
             })
             .slice(0, 4);
-    }, [article, allContent]);
+    }, [recipe, allContent]);
 
     // Ensure tabs exist
-    const tabs = article.tabs && article.tabs.length > 0 ? article.tabs : [];
+    const tabs = recipe.tabs && recipe.tabs.length > 0 ? recipe.tabs : [];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -39,7 +39,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
             />
             
             <motion.div 
-                layoutId={`article-${article.id}`}
+                layoutId={`recipe-${recipe.id}`}
                 className="bg-[#FAF9F6] w-full max-w-5xl h-[90vh] md:h-[750px] rounded-3xl shadow-2xl relative overflow-hidden flex flex-col md:flex-row z-10"
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -55,22 +55,26 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
                 {/* Image Side */}
                 <div className="w-full md:w-5/12 h-64 md:h-full relative flex-shrink-0">
                     <img 
-                        src={article.imageUrl} 
-                        alt={article.title} 
+                        src={recipe.imageUrl} 
+                        alt={recipe.title} 
                         className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1a2e1a]/90 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-[#1a2e1a]/20"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#8B4513]/90 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-[#8B4513]/20"></div>
                      
                      <div className="absolute bottom-4 right-4 left-4 z-20 flex flex-col gap-2">
+                        <div className="flex items-center gap-2 mb-2 text-orange-200">
+                             <ChefHat size={20}/>
+                             <span className="font-bold text-sm">מתכון בריאות</span>
+                        </div>
                         <div className="flex flex-wrap gap-1.5">
-                            {article.tags.slice(0, 4).map((tag, i) => (
+                            {recipe.tags.slice(0, 4).map((tag, i) => (
                                 <span key={i} className="bg-black/30 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-full border border-white/20 shadow-sm">
-                                    # {tag}
+                                    {tag}
                                 </span>
                             ))}
                         </div>
                         <div className="text-white md:hidden pr-1 mt-1">
-                            <h2 className="text-2xl font-bold leading-tight">{article.title}</h2>
+                            <h2 className="text-2xl font-bold leading-tight">{recipe.title}</h2>
                         </div>
                     </div>
                 </div>
@@ -80,36 +84,34 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
                     
                     <div className="hidden md:block p-8 pb-0">
                         <div className="flex items-center gap-2 mb-2">
-                             <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide text-white inline-block shadow-sm ${
-                                article.type === 'case_study' ? 'bg-blue-600' : 'bg-green-600'
-                            }`}>
-                                {article.type === 'case_study' ? 'מקרה אירוע' : 'מאמר'}
+                             <span className="px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide text-white inline-block shadow-sm bg-orange-600 flex items-center gap-1">
+                                <Utensils size={10} /> מתכון
                             </span>
                             <span className="text-gray-400 text-sm flex items-center gap-1">
-                                <Calendar size={14} /> עודכן לאחרונה: {article.date}
+                                <Calendar size={14} /> עודכן: {recipe.date}
                             </span>
                         </div>
-                        <h2 className="text-3xl font-bold text-[#1a2e1a] leading-tight">{article.title}</h2>
+                        <h2 className="text-3xl font-bold text-[#3E2723] leading-tight">{recipe.title}</h2>
                     </div>
 
                     {/* Tabs */}
                     <div className="flex items-center gap-6 px-4 md:px-8 mt-6 border-b border-gray-200 flex-shrink-0 overflow-x-auto">
                         <button 
                             onClick={() => setActiveTabId('summary')}
-                            className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTabId === 'summary' ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTabId === 'summary' ? 'text-orange-800 font-bold' : 'text-gray-400 hover:text-gray-600'}`}
                         >
-                            תקציר
-                            {activeTabId === 'summary' && <motion.div layoutId="article-tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
+                            על המתכון
+                            {activeTabId === 'summary' && <motion.div layoutId="recipe-tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-orange-800" />}
                         </button>
                         
                         {tabs.map(tab => (
                              <button 
                                 key={tab.id}
                                 onClick={() => setActiveTabId(tab.id)}
-                                className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTabId === tab.id ? 'text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
+                                className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTabId === tab.id ? 'text-orange-800 font-bold' : 'text-gray-400 hover:text-gray-600'}`}
                             >
                                 {tab.title}
-                                {activeTabId === tab.id && <motion.div layoutId="article-tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-green-800" />}
+                                {activeTabId === tab.id && <motion.div layoutId="recipe-tab-indicator" className="absolute bottom-0 right-0 w-full h-0.5 bg-orange-800" />}
                             </button>
                         ))}
                     </div>
@@ -123,23 +125,18 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: -10 }}
-                                        className="prose prose-lg prose-green max-w-none text-gray-700 leading-relaxed font-light"
+                                        className="prose prose-lg prose-orange max-w-none text-gray-700 leading-relaxed font-light"
                                     >
-                                        <p className="font-bold text-xl text-gray-800 mb-6">{article.summary}</p>
+                                        <p className="font-bold text-xl text-gray-800 mb-6">{recipe.summary}</p>
                                         
-                                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm text-sm mt-8">
-                                            <div className="flex items-center gap-3 text-gray-600 border-b border-gray-50 pb-2 mb-2">
-                                                <User size={16} className="text-green-500"/>
-                                                <span className="font-bold">נכתב ע"י:</span>
-                                                <span>צוות Herbal Wisdom</span>
+                                        <div className="bg-orange-50 p-6 rounded-2xl border border-orange-100 shadow-sm text-sm mt-8">
+                                            <div className="flex items-center gap-3 text-orange-800 border-b border-orange-200 pb-2 mb-2">
+                                                <Flame size={16} className="text-orange-500"/>
+                                                <span className="font-bold">טיפ מהמטבח:</span>
                                             </div>
-                                             <div className="flex flex-wrap gap-2">
-                                                {article.tags.map((tag, i) => (
-                                                    <span key={i} className="flex items-center gap-1 text-xs bg-green-50 border border-green-100 text-green-700 px-2 py-1 rounded-lg">
-                                                        # {tag}
-                                                    </span>
-                                                ))}
-                                            </div>
+                                            <p className="text-gray-700 italic">
+                                                שימוש בצמחי מרפא בבישול לא רק משפר את הטעם, אלא גם מוסיף ערך בריאותי משמעותי. מומלץ תמיד להשתמש בחומרי גלם טריים ואיכותיים.
+                                            </p>
                                         </div>
                                     </motion.div>
                                 ) : (
@@ -153,7 +150,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
                                                 exit={{ opacity: 0, y: -10 }}
                                                 className="prose prose-lg max-w-none text-gray-700 leading-relaxed"
                                             >
-                                                <h3 className="text-xl font-bold mb-4">{tab.title}</h3>
+                                                <h3 className="text-xl font-bold mb-4 text-[#3E2723]">{tab.title}</h3>
                                                 <div className="whitespace-pre-line">{tab.content}</div>
                                             </motion.div>
                                         );
@@ -164,7 +161,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
                         
                          {relatedItems.length > 0 && (
                             <div className="bg-gray-50 border-t border-gray-200 p-8 mt-auto">
-                                <h3 className="text-lg font-bold text-gray-800 mb-4">תכנים נוספים שעשויים לעניין אותך</h3>
+                                <h3 className="text-lg font-bold text-gray-800 mb-4">מתכונים ותכנים נוספים</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {relatedItems.map((item, idx) => (
                                         <div 
@@ -199,4 +196,4 @@ const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose, onSwitchI
     );
 };
 
-export default ArticleModal;
+export default RecipeModal;
