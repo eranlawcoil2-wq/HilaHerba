@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud, Lock, LogIn, HardDrive, RotateCcw, RefreshCw } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud, Lock, LogIn, HardDrive, RotateCcw, RefreshCw, Link as LinkIcon } from 'lucide-react';
 import { ContentItem, Slide, Plant, Article, Recipe } from '../types';
 import { PLANTS, ARTICLES, SLIDES as DEMO_SLIDES } from '../services/data';
+import { supabaseUrl } from '../services/supabaseClient';
 
 type Tab = 'general' | 'content' | 'slides' | 'connections';
 
@@ -33,7 +34,7 @@ const Admin: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [isLoadingDemo, setIsLoadingDemo] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null); // New Success Message State
+  const [successMessage, setSuccessMessage] = useState<string | null>(null); 
   
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -133,11 +134,20 @@ const Admin: React.FC = () => {
         let msg = error.message || error.toString();
         
         // Specific handling for Schema Cache error
-        if (msg.includes('schema cache') || msg.includes('Could not find the')) {
-            msg = `נראה שמסד הנתונים עודכן אך החיבור עדיין שומר הגדרות ישנות.\n\nפתרון:\n1. וודא שהרצת את קוד ה-SQL המלא ב-Supabase.\n2. רענן את העמוד הזה (לחץ F5 או Refresh) ונסה לשמור שוב.\n\nהודעה מקורית: ${msg}`;
+        if (msg.includes('schema cache') || msg.includes('Could not find the') || msg.includes('admin_email')) {
+            msg = `שגיאת סנכרון מסד נתונים (Schema Cache).
+            
+הסיבה: האתר מנסה לשמור שדות חדשים (כמו admin_email) אבל ה-Supabase עדיין לא "קלט" שהם קיימים, למרות שהרצת את ה-SQL.
+
+פתרונות (נסה לפי הסדר):
+1. רענן את העמוד הזה (F5) ונסה לשמור שוב.
+2. וודא שאתה מריץ את ה-SQL באותו פרויקט שהאתר מחובר אליו (בדוק את כתובת הפרויקט בטאב 'חיבורים').
+3. פתרון קסם: כנס ל-Supabase -> Settings -> Infrastructure -> לחץ על "Restart Project". זה ינקה את הזיכרון ויפתור את הבעיה מיידית.
+
+הודעה טכנית: ${msg}`;
         }
 
-        showError('שגיאה בשמירה:\n' + msg);
+        showError(msg);
     }
   };
 
@@ -957,6 +967,26 @@ NOTIFY pgrst, 'reload config';
             <div className="max-w-4xl">
                 <h3 className="text-3xl font-bold mb-6">חיבורים, גיבויים והגדרות טכניות</h3>
                 
+                {/* Connection Status Box */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+                     <h4 className="font-bold text-xl mb-4 text-gray-800 flex items-center gap-2"><LinkIcon size={20}/> סטטוס חיבור</h4>
+                     <div className="flex items-center gap-4 text-sm text-gray-600">
+                         <div className={`w-3 h-3 rounded-full ${supabaseUrl ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                         <span>
+                             {supabaseUrl ? (
+                                 <>
+                                     מחובר לפרויקט: <span className="font-mono bg-gray-100 px-2 py-1 rounded select-all">{supabaseUrl}</span>
+                                 </>
+                             ) : (
+                                 'לא מחובר (חסרים מפתחות)'
+                             )}
+                         </span>
+                     </div>
+                     <p className="text-xs text-gray-400 mt-2">
+                         וודא שאתה מריץ את קוד ה-SQL באותו פרויקט שמופיע כאן.
+                     </p>
+                </div>
+
                 {/* NEW BACKUP SECTION */}
                 <div className="bg-blue-50 p-6 rounded-2xl shadow-sm border border-blue-200 mb-8">
                      <div className="flex justify-between items-center mb-2">
