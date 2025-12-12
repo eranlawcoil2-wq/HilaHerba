@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud, Lock, LogIn, HardDrive, RotateCcw } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud, Lock, LogIn, HardDrive, RotateCcw, RefreshCw } from 'lucide-react';
 import { ContentItem, Slide, Plant, Article, Recipe } from '../types';
 import { PLANTS, ARTICLES, SLIDES as DEMO_SLIDES } from '../services/data';
 
@@ -130,7 +130,14 @@ const Admin: React.FC = () => {
         await updateGeneral(generalForm);
         showSuccess('הגדרות נשמרו בהצלחה!');
     } catch (error: any) {
-        showError('שגיאה בשמירה:\n' + (error.message || error.toString()) + '\n\nוודא שהאתר מחובר למסד הנתונים ושביצעת את שלב ה-SQL העדכני (כולל פקודת רענון ה-Cache).');
+        let msg = error.message || error.toString();
+        
+        // Specific handling for Schema Cache error
+        if (msg.includes('schema cache') || msg.includes('Could not find the')) {
+            msg = `נראה שמסד הנתונים עודכן אך החיבור עדיין שומר הגדרות ישנות.\n\nפתרון:\n1. וודא שהרצת את קוד ה-SQL המלא ב-Supabase.\n2. רענן את העמוד הזה (לחץ F5 או Refresh) ונסה לשמור שוב.\n\nהודעה מקורית: ${msg}`;
+        }
+
+        showError('שגיאה בשמירה:\n' + msg);
     }
   };
 
@@ -1217,10 +1224,10 @@ NOTIFY pgrst, 'reload config';
                         {errorCopied ? 'הועתק!' : 'העתק שגיאה'}
                     </button>
                     <button 
-                        onClick={() => setErrorMessage(null)} 
-                        className="flex-1 bg-[#1a2e1a] text-white py-3 rounded-xl font-bold hover:bg-green-900 shadow-lg"
+                        onClick={() => window.location.reload()} 
+                        className="flex-1 bg-[#1a2e1a] text-white py-3 rounded-xl font-bold hover:bg-green-900 shadow-lg flex items-center justify-center gap-2"
                     >
-                        סגור
+                        <RefreshCw size={18} /> רענן עמוד
                     </button>
                 </div>
             </div>
