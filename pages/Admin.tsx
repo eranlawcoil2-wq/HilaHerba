@@ -882,13 +882,13 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
 
                         {editingItem?.type === 'plant' ? (
                             <div className="grid md:grid-cols-2 gap-6">
-                                <div><label className="block font-bold text-sm">שם עברי</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).hebrewName} onChange={e => setEditingItem({...editingItem, hebrewName: e.target.value} as ContentItem)} /></div>
-                                <div><label className="block font-bold text-sm">שם לטיני</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).latinName} onChange={e => setEditingItem({...editingItem, latinName: e.target.value} as ContentItem)} /></div>
+                                <div><label className="block font-bold text-sm mb-1">שם עברי</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).hebrewName} onChange={e => setEditingItem({...editingItem, hebrewName: e.target.value} as ContentItem)} /></div>
+                                <div><label className="block font-bold text-sm mb-1">שם לטיני</label><input type="text" className="w-full border p-2 rounded ltr" value={(editingItem as Plant).latinName} onChange={e => setEditingItem({...editingItem, latinName: e.target.value} as ContentItem)} /></div>
                                 <div className="md:col-span-2">
-                                     <div className="flex justify-between"><label className="block font-bold text-sm">תיאור קצר</label> <button onClick={() => handleAI('description', `Write a short description (Hebrew) for medicinal plant: ${(editingItem as Plant).hebrewName}`)}><Sparkles size={16} className="text-purple-500"/></button></div>
-                                     <textarea className="w-full border p-2 rounded" rows={3} value={(editingItem as Plant).description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
+                                     <div className="flex justify-between items-end mb-1"><label className="block font-bold text-sm">תיאור קצר (מופיע בראש הטאב הכללי)</label> <button onClick={() => handleAI('description', `Write a short description (Hebrew) for medicinal plant: ${(editingItem as Plant).hebrewName}`)}><Sparkles size={16} className="text-purple-500"/></button></div>
+                                     <textarea className="w-full border p-2 rounded" rows={4} value={(editingItem as Plant).description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
                                 </div>
-                                <div><label className="block font-bold text-sm">קטגוריה</label>
+                                <div><label className="block font-bold text-sm mb-1">קטגוריה</label>
                                     <select className="w-full border p-2 rounded" value={(editingItem as Plant).category} onChange={e => setEditingItem({...editingItem, category: e.target.value as any} as ContentItem)}>
                                         <option value="general">כללי</option>
                                         <option value="relaxing">הרגעה</option>
@@ -897,7 +897,16 @@ create policy "Public Images Upload" on storage.objects for insert with check ( 
                                         <option value="skin">עור</option>
                                     </select>
                                 </div>
-                                <div><label className="block font-bold text-sm">תגיות/יתרונות (פסיקים)</label><input type="text" className="w-full border p-2 rounded" value={(editingItem as Plant).benefits?.join(', ')} onChange={e => setEditingItem({...editingItem, benefits: e.target.value.split(',').map(s => s.trim())} as ContentItem)} /></div>
+                                <div>
+                                    <label className="block font-bold text-sm mb-1">סגולות עיקריות (מופרד בפסיקים)</label>
+                                    <p className="text-xs text-gray-500 mb-1">אלו הנקודות שמופיעות ברשימה בטאב הכללי בצד המודל</p>
+                                    <textarea 
+                                        className="w-full border p-2 rounded" 
+                                        rows={3} 
+                                        value={(editingItem as Plant).benefits?.join(', ')} 
+                                        onChange={e => setEditingItem({...editingItem, benefits: e.target.value.split(',').map(s => s.trim())} as ContentItem)} 
+                                    />
+                                </div>
                             </div>
                         ) : (
                              <div className="grid gap-6">

@@ -169,9 +169,10 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setContent(contentData.map(mapDbToContent));
       } else {
         if (contentData && contentData.length === 0) {
+             // Explicitly empty DB
              setContent([]);
         } else {
-             // Fallback
+             // Fallback (Error or undefined response)
              const staticContent = [...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES];
              const freshStatic = staticContent.map(item => ({
                  ...item,
@@ -198,6 +199,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error("Error fetching data:", error);
+      // Fallback on error
       setContent([...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES]);
       setSlides(SLIDES);
     } finally {
@@ -268,7 +270,8 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
      const oldContent = [...content];
      setContent(prev => prev.map(c => c.id === item.id ? item : c));
      const dbItem = mapContentToDb(item);
-     const { error } = await supabase.from('content').update(dbItem).eq('id', item.id);
+     // Changed to upsert to ensure creation if it doesn't exist (e.g., editing static data)
+     const { error } = await supabase.from('content').upsert(dbItem);
      if (error) {
          setContent(oldContent);
          throw error;
@@ -301,14 +304,16 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateSlide = async (slide: Slide) => {
       setSlides(prev => prev.map(s => s.id === slide.id ? slide : s));
-      const { error } = await supabase.from('hero_slides').update({
+      // Changed to upsert to ensure creation if it doesn't exist (e.g., editing static data)
+      const { error } = await supabase.from('hero_slides').upsert({
+          id: slide.id,
           title: slide.title,
           subtitle: slide.subtitle,
           text: slide.text,
           image_url: slide.image,
           is_active: slide.active,
           display_order: slide.order
-      }).eq('id', slide.id);
+      });
       if (error) throw error;
   };
 
