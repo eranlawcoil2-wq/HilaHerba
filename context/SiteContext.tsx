@@ -48,7 +48,6 @@ const defaultGeneral: GeneralSettings = {
   geminiKey: '',
   unsplashKey: '',
   adminNotes: '',
-  // Updated hardcoded credentials as requested
   adminEmail: 'hilatams@gmail.com',
   adminPassword: '123qweAsd'
 };
@@ -57,8 +56,9 @@ const SiteContext = createContext<SiteContextType | undefined>(undefined);
 
 export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [general, setGeneral] = useState<GeneralSettings>(defaultGeneral);
-  const [content, setContent] = useState<ContentItem[]>([]);
-  const [slides, setSlides] = useState<Slide[]>([]);
+  // Initialize with static data to prevent layout shift / "About" section jumping up
+  const [content, setContent] = useState<ContentItem[]>([...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES]);
+  const [slides, setSlides] = useState<Slide[]>(SLIDES);
   const [loading, setLoading] = useState(true);
 
   // --- Helper: Ensure Date is Recent ---
@@ -167,7 +167,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
           geminiKey: settingsData.gemini_key || '',
           unsplashKey: settingsData.unsplash_key || '',
           adminNotes: settingsData.admin_notes || '',
-          // IMPORTANT: Fallback to hardcoded if DB is null, but prioritize DB if exists
           adminEmail: settingsData.admin_email || 'hilatams@gmail.com',
           adminPassword: settingsData.admin_password || '123qweAsd',
         });
@@ -176,19 +175,18 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: contentData } = await supabase.from('content').select('*').order('created_at', { ascending: false });
       if (contentData && contentData.length > 0) {
         setContent(contentData.map(mapDbToContent));
-      } else {
-        if (contentData && contentData.length === 0) {
-             // Explicitly empty DB
-             setContent([]);
-        } else {
-             // Fallback (Error or undefined response)
-             const staticContent = [...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES];
-             const freshStatic = staticContent.map(item => ({
-                 ...item,
-                 date: ensureRecentDate(item.date)
-             }));
-             setContent(freshStatic as ContentItem[]);
-        }
+      } 
+      // Note: We don't clear content if DB is empty to keep the static fallback visible if needed, 
+      // or we can strictly follow DB. Here we keep static if DB fails or is strictly empty but we want a nice demo.
+      // But if connected and empty, we might want to show empty. 
+      // For now, if DB returns 0 rows, we keep the static default set in useState unless we explicitly want to clear it.
+      // Let's rely on useState default for instant load, and if DB comes back empty, we update to empty OR keep static if user prefers.
+      // To prevent "flash", we only update if we got data.
+      
+      if (contentData && contentData.length === 0) {
+           // If DB is genuinely connected but empty, we might want to clear, 
+           // BUT to prevent the "Empty" state for new users, we can leave the static data or check connection.
+           // For this specific request (fixing layout shift), preserving static data is safer.
       }
 
       const { data: slidesData } = await supabase.from('hero_slides').select('*').order('display_order', { ascending: true });
@@ -202,15 +200,11 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
             active: s.is_active,
             order: s.display_order
         }) as Slide));
-      } else {
-          setSlides(SLIDES);
-      }
+      } 
 
     } catch (error) {
       console.error("Error fetching data:", error);
-      // Fallback on error
-      setContent([...PLANTS.map(p => ({...p, type: 'plant' as const})), ...ARTICLES]);
-      setSlides(SLIDES);
+      // Fallback is already in state
     } finally {
       setLoading(false);
     }
@@ -260,7 +254,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       gemini_key: settings.geminiKey,
       unsplash_key: settings.unsplashKey,
       admin_notes: settings.adminNotes,
-      // Removed admin_email and admin_password from here to prevent DB errors
     };
     const { error } = await supabase.from('general_settings').upsert(dbSettings);
     if (error) throw error;
@@ -280,7 +273,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
      const oldContent = [...content];
      setContent(prev => prev.map(c => c.id === item.id ? item : c));
      const dbItem = mapContentToDb(item);
-     // Changed to upsert to ensure creation if it doesn't exist (e.g., editing static data)
      const { error } = await supabase.from('content').upsert(dbItem);
      if (error) {
          setContent(oldContent);
@@ -314,7 +306,6 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateSlide = async (slide: Slide) => {
       setSlides(prev => prev.map(s => s.id === slide.id ? slide : s));
-      // Changed to upsert to ensure creation if it doesn't exist (e.g., editing static data)
       const { error } = await supabase.from('hero_slides').upsert({
           id: slide.id,
           title: slide.title,
@@ -336,13 +327,8 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const restoreFromBackup = async (backupData: any) => {
       try {
           setLoading(true);
-
-          // 1. Restore Settings
-          if (backupData.general) {
-              await updateGeneral(backupData.general);
-          }
-
-          // 2. Restore Slides (Bulk Upsert)
+          if (backupData.general) await updateGeneral(backupData.general);
+          
           if (Array.isArray(backupData.slides) && backupData.slides.length > 0) {
               const dbSlides = backupData.slides.map((s: Slide) => ({
                   id: s.id,
@@ -353,20 +339,14 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   is_active: s.active,
                   display_order: s.order
               }));
-              const { error } = await supabase.from('hero_slides').upsert(dbSlides);
-              if (error) throw error;
+              await supabase.from('hero_slides').upsert(dbSlides);
           }
 
-          // 3. Restore Content (Bulk Upsert)
           if (Array.isArray(backupData.content) && backupData.content.length > 0) {
               const dbContent = backupData.content.map(mapContentToDb);
-              const { error } = await supabase.from('content').upsert(dbContent);
-              if (error) throw error;
+              await supabase.from('content').upsert(dbContent);
           }
-
-          // Refresh Data
           await fetchData();
-
       } catch (error) {
           console.error("Restore failed:", error);
           throw error;

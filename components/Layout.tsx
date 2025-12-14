@@ -169,49 +169,49 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-[#1a2e1a] text-white py-12 border-t border-green-800 relative z-30">
+      {/* Footer - Compact Version */}
+      <footer className="bg-[#1a2e1a] text-white py-8 border-t border-green-800 relative z-30">
         <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-12 items-start text-right">
+          <div className="grid md:grid-cols-2 gap-8 items-start text-right">
             
             {/* About Column */}
             <div className="flex flex-col items-start">
-              <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                 <Leaf className="text-green-400" size={20}/> {general.siteName}
+              <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+                 <Leaf className="text-green-400" size={18}/> {general.siteName}
               </h3>
-              <p className="text-gray-300 leading-relaxed max-w-sm">
+              <p className="text-gray-300 leading-relaxed max-w-sm text-sm">
                 {general.aboutShort}
               </p>
             </div>
             
             {/* Contact Details Column */}
             <div className="flex flex-col items-start">
-              <h4 className="text-xl font-bold mb-6 text-green-100">פרטי התקשרות</h4>
-              <ul className="space-y-4 flex flex-col items-start w-full">
+              <h4 className="text-lg font-bold mb-3 text-green-100">פרטי התקשרות</h4>
+              <ul className="space-y-2 flex flex-col items-start w-full text-sm">
                 <li>
-                    <a href={`tel:${general.phone}`} className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors group">
-                      <Phone size={18} className="text-green-400 group-hover:text-green-300"/>
+                    <a href={`tel:${general.phone}`} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors group">
+                      <Phone size={16} className="text-green-400 group-hover:text-green-300"/>
                       <span className="group-hover:underline">{general.phone}</span>
                     </a>
                 </li>
                 <li>
-                    <a href={`mailto:${general.email}`} className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors group">
-                      <Mail size={18} className="text-green-400 group-hover:text-green-300"/>
+                    <a href={`mailto:${general.email}`} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors group">
+                      <Mail size={16} className="text-green-400 group-hover:text-green-300"/>
                       <span className="group-hover:underline">{general.email}</span>
                     </a>
                 </li>
-                <li className="flex flex-col items-start gap-2 text-gray-300">
-                   <div className="flex items-center gap-3">
-                      <MapPin size={18} className="text-green-400"/>
+                <li className="flex flex-col items-start gap-1 text-gray-300">
+                   <div className="flex items-center gap-2">
+                      <MapPin size={16} className="text-green-400"/>
                       <span>{general.address}</span>
                    </div>
                    <a 
                       href={`https://waze.com/ul?q=${encodeURIComponent(general.address)}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded-full transition-colors mr-7"
+                      className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full transition-colors mr-6"
                    >
-                      <Navigation size={12} />
+                      <Navigation size={10} />
                       נווט עם Waze
                    </a>
                 </li>
@@ -221,19 +221,19 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
 
           {/* Bottom Bar: Copyright & Legal Links */}
-          <div className="mt-12 pt-8 border-t border-green-900 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400">
-            <div className="flex items-center gap-3">
-              <span>© {new Date().getFullYear()} {general.siteName}. כל הזכויות שמורות.</span>
+          <div className="mt-8 pt-4 border-t border-green-900 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-gray-400">
+            <div className="flex items-center gap-2">
+              <span>© {new Date().getFullYear()} {general.siteName}.</span>
               
               {/* ADMIN LINK - Only visible on Contact page */}
               {location.pathname === '/contact' && (
-                  <Link to="/admin" className="text-white/30 hover:text-white transition-colors p-2" aria-label="כניסה לניהול">
-                      <Lock size={16} />
+                  <Link to="/admin" className="text-white/30 hover:text-white transition-colors p-1" aria-label="כניסה לניהול">
+                      <Lock size={12} />
                   </Link>
               )}
             </div>
 
-            <div className="flex flex-wrap justify-center gap-6">
+            <div className="flex flex-wrap justify-center gap-4">
                <button onClick={() => setLegalModalType('privacy')} className="hover:text-white transition-colors hover:underline">
                   מדיניות פרטיות
                </button>

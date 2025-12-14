@@ -20,12 +20,15 @@ const Hero: React.FC = () => {
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + activeSlides.length) % activeSlides.length);
 
-  if (activeSlides.length === 0) return null;
+  // Instead of returning null, we return a placeholder or the content to prevent layout shift
+  if (activeSlides.length === 0) {
+      return <div className="min-h-[50vh] bg-[#FAF9F6]"></div>;
+  }
 
   const activeSlide = activeSlides[currentSlide];
 
   return (
-    <section className="relative min-h-auto md:min-h-[85vh] flex items-center overflow-hidden bg-[#FAF9F6] pt-32 pb-20 md:pt-0 md:pb-0">
+    <section className="relative min-h-[60vh] md:min-h-[85vh] flex items-center overflow-hidden bg-[#FAF9F6] pt-32 pb-20 md:pt-0 md:pb-0">
       
       <div className="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center h-full relative z-10">
         

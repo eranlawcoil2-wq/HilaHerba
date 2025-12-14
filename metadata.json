@@ -1,5 +1,6 @@
 {
   "name": "Herbal Wisdom - Center for Medicinal Plants",
   "description": "A comprehensive knowledge center and portfolio for a herbalist, featuring a plant database, case studies, and articles.",
+  "version": "1.0.0",
   "requestFramePermissions": []
 }

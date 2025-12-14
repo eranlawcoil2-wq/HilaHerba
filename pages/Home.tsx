@@ -158,10 +158,10 @@ const Home: React.FC = () => {
 
   const getBadgeConfig = (type: string) => {
       switch(type) {
-          case 'plant': return { color: 'bg-[#1a2e1a]', icon: <Sprout size={12} />, label: 'צמח מרפא' };
-          case 'article': return { color: 'bg-green-600', icon: <FileText size={12} />, label: 'מאמר' };
-          case 'case_study': return { color: 'bg-blue-600', icon: <BookOpen size={12} />, label: 'מקרה אירוע' };
-          case 'recipe': return { color: 'bg-orange-600', icon: <Utensils size={12} />, label: 'מתכון' };
+          case 'plant': return { color: 'bg-[#1a2e1a]', icon: <Sprout size={10} />, label: 'צמח מרפא' };
+          case 'article': return { color: 'bg-green-600', icon: <FileText size={10} />, label: 'מאמר' };
+          case 'case_study': return { color: 'bg-blue-600', icon: <BookOpen size={10} />, label: 'מקרה אירוע' };
+          case 'recipe': return { color: 'bg-orange-600', icon: <Utensils size={10} />, label: 'מתכון' };
           default: return { color: 'bg-gray-500', icon: null, label: 'כללי' };
       }
   };
@@ -356,30 +356,31 @@ const Home: React.FC = () => {
                             layoutId={(item.type === 'plant' ? 'plant-' : item.type === 'recipe' ? 'recipe-' : 'article-') + item.id}
                             whileHover={{ y: -8, scale: 1.02 }}
                             onClick={() => handleCardClick(item)}
-                            className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col h-[320px] border border-gray-100 group relative min-w-[40vw] md:min-w-0 snap-center"
+                            className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col h-[340px] border border-gray-100 group relative min-w-[42vw] md:min-w-0 snap-center"
                           >
-                             {/* Top Section */}
-                             <div className="px-5 pt-5 pb-3 bg-white z-10">
-                                 <div className="flex justify-between items-start mb-1">
-                                     <h3 className="text-xl font-bold text-gray-800 group-hover:text-green-800 transition-colors line-clamp-1">
-                                         {item.type === 'plant' ? item.hebrewName : item.title}
-                                     </h3>
-                                     <div className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider text-white ${badge.color}`}>
-                                        {badge.icon} {badge.label}
-                                     </div>
-                                 </div>
-                                 <p className="text-sm text-gray-400 italic">
+                             {/* Top Section: TEXT - Now cleaner without badge */}
+                             <div className="px-4 pt-5 pb-3 bg-white z-10 flex flex-col justify-start min-h-[90px]">
+                                 <h3 className="text-lg md:text-xl font-bold text-gray-800 group-hover:text-green-800 transition-colors line-clamp-2 leading-tight mb-1">
+                                     {item.type === 'plant' ? item.hebrewName : item.title}
+                                 </h3>
+                                 <p className="text-xs text-gray-400 italic">
                                      {item.type === 'plant' ? item.latinName : item.date}
                                  </p>
                              </div>
 
-                             {/* Image */}
+                             {/* Image Section - Badge moved here */}
                              <div className="relative flex-grow w-full overflow-hidden">
                                  <img 
                                      src={item.imageUrl} 
                                      alt={item.type === 'plant' ? item.hebrewName : item.title} 
                                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                                  />
+                                 
+                                 {/* BADGE: Top Left of Image */}
+                                 <div className={`absolute top-3 left-3 z-20 flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider text-white shadow-md ${badge.color}`}>
+                                    {badge.icon} {badge.label}
+                                 </div>
+
                                  <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-black/80 to-transparent pointer-events-none"></div>
                                  
                                  <div className="absolute bottom-3 right-3 left-3">
