@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSite } from '../context/SiteContext';
-import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud, Lock, LogIn, HardDrive, RotateCcw, RefreshCw, Link as LinkIcon, HelpCircle, AlertCircle } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Settings, FileText, LayoutDashboard, Database, Copy, Check, Image as ImageIcon, Sparkles, Upload, Search, X, MonitorPlay, StickyNote, Server, MapPin, Key, AlertTriangle, DownloadCloud, Lock, LogIn, HardDrive, RotateCcw, RefreshCw, Link as LinkIcon, HelpCircle, AlertCircle, Tag } from 'lucide-react';
 import { ContentItem, Slide, Plant, Article, Recipe } from '../types';
 import { PLANTS, ARTICLES, SLIDES as DEMO_SLIDES } from '../services/data';
 import { supabaseUrl } from '../services/supabaseClient';
@@ -27,6 +27,7 @@ const Admin: React.FC = () => {
 
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<ContentItem> | null>(null);
+  const [newTagInput, setNewTagInput] = useState(''); // State for adding new tags/benefits
   
   const [isEditingSlide, setIsEditingSlide] = useState(false);
   const [editingSlide, setEditingSlide] = useState<Partial<Slide> | null>(null);
@@ -209,10 +210,12 @@ const Admin: React.FC = () => {
       latinName: '',
       description: '',
       benefits: [],
+      tags: [],
       category: 'general',
       tabs: [],
       date: new Date().toISOString().split('T')[0] // Default to today
     });
+    setNewTagInput('');
     setIsEditingContent(true);
   };
 
@@ -406,7 +409,40 @@ const Admin: React.FC = () => {
       }
   };
 
-  const copyToClipboard = () => { /* ... existing logic ... */ };
+  // Helper to add a tag
+  const handleAddTag = () => {
+      if (!newTagInput.trim() || !editingItem) return;
+      
+      const newTag = newTagInput.trim();
+      const isPlant = editingItem.type === 'plant';
+      
+      if (isPlant) {
+          const currentBenefits = (editingItem as Plant).benefits || [];
+          if (!currentBenefits.includes(newTag)) {
+              setEditingItem({ ...editingItem, benefits: [...currentBenefits, newTag] } as Plant);
+          }
+      } else {
+          const currentTags = (editingItem as Article).tags || [];
+          if (!currentTags.includes(newTag)) {
+               setEditingItem({ ...editingItem, tags: [...currentTags, newTag] } as Article);
+          }
+      }
+      setNewTagInput('');
+  };
+
+  // Helper to remove a tag
+  const handleRemoveTag = (tagToRemove: string) => {
+      if (!editingItem) return;
+      const isPlant = editingItem.type === 'plant';
+
+      if (isPlant) {
+          const currentBenefits = (editingItem as Plant).benefits || [];
+          setEditingItem({ ...editingItem, benefits: currentBenefits.filter(t => t !== tagToRemove) } as Plant);
+      } else {
+          const currentTags = (editingItem as Article).tags || [];
+          setEditingItem({ ...editingItem, tags: currentTags.filter(t => t !== tagToRemove) } as Article);
+      }
+  };
 
   // --- LOGIN SCREEN ---
   if (!isAuthenticated) {
@@ -630,6 +666,50 @@ const Admin: React.FC = () => {
                             <div className="flex gap-2">
                                 <input type="text" value={editingItem?.imageUrl} onChange={e => setEditingItem({...editingItem, imageUrl: e.target.value})} className="w-full border p-2 rounded ltr" placeholder="URL תמונה" />
                                 <button onClick={() => { setImagePickerTarget('content'); setShowImagePicker(true); }} className="bg-gray-100 px-4 rounded">תמונה</button>
+                            </div>
+
+                            {/* Tags / Benefits Editor */}
+                            <div className="bg-gray-50 p-4 rounded border border-gray-100">
+                                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                    <Tag size={16} />
+                                    {editingItem?.type === 'plant' ? 'סגולות רפואיות (תגיות)' : 'תגיות'}
+                                </label>
+                                
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {(editingItem?.type === 'plant' ? ((editingItem as Plant).benefits || []) : ((editingItem as Article).tags || [])).map((tag, idx) => (
+                                        <span key={idx} className="bg-white border px-3 py-1 rounded-full text-sm flex items-center gap-2 shadow-sm">
+                                            {tag}
+                                            <button 
+                                                onClick={() => handleRemoveTag(tag)} 
+                                                className="text-gray-400 hover:text-red-500 transition-colors"
+                                            >
+                                                <X size={14}/>
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        value={newTagInput}
+                                        onChange={(e) => setNewTagInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleAddTag();
+                                            }
+                                        }}
+                                        className="border p-2 rounded text-sm flex-grow focus:outline-none focus:ring-2 focus:ring-green-200"
+                                        placeholder={editingItem?.type === 'plant' ? "הוסף סגולה (לדוגמה: נוגד דלקת)..." : "הוסף תגית (לדוגמה: חורף)..."}
+                                    />
+                                    <button 
+                                        onClick={handleAddTag}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-bold transition-colors"
+                                    >
+                                        הוסף
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Tabs Editor */}

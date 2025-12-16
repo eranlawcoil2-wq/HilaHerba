@@ -182,14 +182,15 @@ const Home: React.FC = () => {
         </div>
 
         <div className="container mx-auto px-6 max-w-7xl relative z-10">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+          {/* Changed grid layout to give text more space (7/12) and image less (5/12) */}
+          <div className="grid md:grid-cols-12 gap-12 items-center">
             
             <motion.div 
                 initial={{ opacity: 0, x: -30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8 }}
-                className="relative"
+                className="relative md:col-span-5"
             >
                 <div className="relative h-[350px] md:h-[500px] w-full rounded-t-[100px] md:rounded-t-[200px] rounded-b-[20px] overflow-hidden border-2 border-white/10">
                     <img 
@@ -210,6 +211,7 @@ const Home: React.FC = () => {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8, delay: 0.2 }}
+                className="md:col-span-7"
             >
                 <span className="text-green-300 font-medium tracking-widest uppercase text-sm mb-4 block">
                     נעים להכיר
@@ -219,7 +221,8 @@ const Home: React.FC = () => {
                 </h2>
                 <div className="w-20 h-1 bg-green-500 mb-8"></div>
                 
-                <p className="text-gray-300 text-lg leading-relaxed mb-10 whitespace-pre-line">
+                {/* Reduced font size to text-base */}
+                <p className="text-gray-300 text-base leading-relaxed mb-10 whitespace-pre-line">
                     {general.aboutLong}
                 </p>
 
